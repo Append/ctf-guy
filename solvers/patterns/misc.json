@@ -1,18 +1,5 @@
 [
   {
-    "challenge": "RED",
-    "slug": "red",
-    "pattern": "",
-    "key_insight": "",
-    "approach": "1. `exiftool` revealed a \"Poem\" metadata field \u2014 first letters of each line spell **CHECKLSB**\n2. Red channel has only two values (254, 255) \u2014 classic LSB steganography\n3. Extracted LSB from all 4 RGBA channels per pixel, row-major order\n4. Output is the base64-encoded flag repeated across all pixels\n\n```\nPoem acrostic: CHECKLSB\nLSB extraction -> base64 -> picoCTF{...}\n```",
-    "tools": [],
-    "missing_tools": [],
-    "points": 0,
-    "solved": true,
-    "flag": "picoCTF{r3d_1s_th3_ult1m4t3_cur3_f0r_54dn355_}",
-    "timestamp": "2026-02-28T03:09:17.881388"
-  },
-  {
     "challenge": "Rust fixme 1",
     "slug": "rust-fixme1",
     "pattern": "",

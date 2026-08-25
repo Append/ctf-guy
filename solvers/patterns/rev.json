@@ -1,0 +1,28 @@
+[
+  {
+    "challenge": "Binary Instrumentation 1",
+    "slug": "bininst1",
+    "pattern": "",
+    "key_insight": "",
+    "approach": "Static extraction \u2014 bypassed the intended Frida instrumentation entirely.\n\nThe binary is packed with PP64Stub, which LZMA-compresses the real PE into a `.ATOM` section. The packer stub decompresses and executes the payload at runtime.\n\n### Steps\n1. Identified PP64 packer from `PP64Stub.exe` string and `.ATOM` section name\n2. Extracted `.ATOM` section (offset `0x6000`, size `0x1600`)\n3. Decompressed with LZMA (`FORMAT_ALONE`) \u2014 first byte `0x5d` is the LZMA properties header\n4. Got a 14336-byte P",
+    "tools": [],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{w4ke_m3_up_w1th_fr1da_f27acc38}",
+    "timestamp": "2026-02-28T02:59:31.957526"
+  },
+  {
+    "challenge": "Binary Instrumentation 2",
+    "slug": "bininst2",
+    "pattern": "",
+    "key_insight": "",
+    "approach": "Static extraction \u2014 same PP64 packer as bininst1.\n\n### Steps\n1. Parsed PE sections, found `.ATOM` at offset `0x6000`, size `0x1200`\n2. Decompressed LZMA payload \u2014 11264-byte PE\n3. Strings revealed `CreateFileA` and `WriteFile` imports, a placeholder path `<Insert path here>`, and a base64 blob\n4. Decoded `cGljb0NURntmcjFkYV9mMHJfYjFuX2luNXRydW0zbnQ0dGlvbiFfYjIxYWVmMzl9`\n\n### Intended Solve\nThe program calls `CreateFileA` to create a file and `WriteFile` to write the flag, but the file path is a ",
+    "tools": [],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{fr1da_f0r_b1n_in5trum3nt4tion!_b21aef39}",
+    "timestamp": "2026-02-28T02:59:38.233770"
+  }
+]

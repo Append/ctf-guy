@@ -1,0 +1,14 @@
+[project]
+name = "ctf-guy"
+version = "0.1.0"
+description = "Semi-automated CTF challenge solver"
+license = "Apache-2.0"
+readme = "README.md"
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+dev = ["black"]
+
+[tool.black]
+line-length = 120
+target-version = ["py312"]

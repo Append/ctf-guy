@@ -1,0 +1,190 @@
+{
+  "uid": "ctf-race-view",
+  "title": "CTF Race View",
+  "tags": ["ctf-guy"],
+  "timezone": "browser",
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "challenge",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "" },
+        "query": "label_values(ctf_solve_duration_seconds, challenge)",
+        "refresh": 2,
+        "includeAll": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Solved",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [{ "expr": "max(ctf_queue_depth{status=\"solved\"})", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Failed",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "targets": [{ "expr": "max(ctf_queue_depth{status=\"failed\"})", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }] }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "In Progress",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "targets": [{ "expr": "max(ctf_active_solvers)", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "yellow" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "yellow", "value": null }] }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Total Cost",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "targets": [{ "expr": "max(ctf_solve_cost_usd_total)", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Queued",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "targets": [{ "expr": "max(ctf_queue_depth{status=\"queued\"})", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "purple" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "purple", "value": null }] }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Race Wins by Model",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "targets": [
+        { "expr": "sum by (model) (ctf_race_winner)", "refId": "A", "legendFormat": "{{model}}" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "options": { "graphMode": "none", "textMode": "value_and_name" }
+    },
+    {
+      "id": 10,
+      "title": "Race Winners",
+      "type": "table",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 4 },
+      "targets": [{
+        "expr": "ctf_race_winner",
+        "refId": "A",
+        "instant": true,
+        "format": "table"
+      }],
+      "transformations": [
+        { "id": "organize", "options": {
+          "excludeByName": { "Time": true, "Value": true, "__name__": true, "solver_id": true },
+          "renameByName": { "challenge": "Challenge", "model": "Winner" }
+        }}
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Solve Duration by Challenge",
+      "type": "barchart",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 4 },
+      "targets": [{
+        "expr": "ctf_solve_duration_seconds{challenge=~\"$challenge\"}",
+        "refId": "A",
+        "instant": true,
+        "format": "table",
+        "legendFormat": "{{challenge}} ({{model}})"
+      }],
+      "fieldConfig": {
+        "defaults": { "unit": "s", "color": { "mode": "palette-classic" } }
+      },
+      "options": { "xField": "challenge" }
+    },
+    {
+      "id": 12,
+      "title": "Queue Depth Over Time",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "targets": [
+        { "expr": "ctf_queue_depth{status=\"solving\"}", "refId": "A", "legendFormat": "Solving" },
+        { "expr": "ctf_queue_depth{status=\"queued\"}", "refId": "B", "legendFormat": "Queued" },
+        { "expr": "ctf_queue_depth{status=\"solved\"}", "refId": "C", "legendFormat": "Solved" },
+        { "expr": "ctf_queue_depth{status=\"failed\"}", "refId": "D", "legendFormat": "Failed" }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "fillOpacity": 20, "stacking": { "mode": "normal" } } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Solved" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Failed" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Solving" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Queued" }, "properties": [{ "id": "color", "value": { "fixedColor": "purple", "mode": "fixed" } }] }
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "title": "Cost per Solve",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "targets": [{
+        "expr": "ctf_solve_cost_usd{challenge=~\"$challenge\"}",
+        "refId": "A",
+        "legendFormat": "{{challenge}} ({{model}})"
+      }],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } }
+    },
+    {
+      "id": 20,
+      "title": "Live Agent Stream",
+      "type": "logs",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 22 },
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "" },
+      "targets": [{
+        "expr": "_msg:agent.text OR _msg:agent.tool_call",
+        "refId": "A"
+      }],
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "showLabels": true
+      }
+    }
+  ],
+  "schemaVersion": 39
+}

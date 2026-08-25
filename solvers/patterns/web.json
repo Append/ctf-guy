@@ -1,0 +1,68 @@
+[
+  {
+    "challenge": "3v@l",
+    "slug": "3val",
+    "pattern": "Python `eval()` injection in a Flask loan calculator. Server uses Werkzeug/Python 3.8.",
+    "key_insight": "",
+    "approach": "",
+    "tools": [],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{D0nt_Use_Unsecure_f@nctions5e20166b}",
+    "timestamp": "2026-02-28T00:28:02.294249"
+  },
+  {
+    "challenge": "Cookie Monster Secret Recipe",
+    "slug": "cookie-monster",
+    "pattern": "",
+    "key_insight": "",
+    "approach": "POST any credentials to `/login.php`. The response sets a `secret_recipe` cookie containing the base64-encoded flag (URL-encoded).\n\n```\nSet-Cookie: secret_recipe=cGljb0NURntjMDBrMWVfbTBuc3Rlcl9sMHZlc19jMDBraWVzX0IzQUQ5NEMyfQ%3D%3D\n```\n\nURL-decode `%3D%3D` -> `==`, then base64-decode the whole thing.",
+    "tools": [],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{c00k1e_m0nster_l0ves_c00kies_B3AD94C2}",
+    "timestamp": "2026-02-28T03:07:40.250216"
+  },
+  {
+    "challenge": "CITADEL",
+    "slug": "citadel-forge",
+    "pattern": "Supply chain attack on a CI/CD platform via dependency confusion \u2014 publish a malicious npm package to an internal registry to exfiltrate build secrets.",
+    "key_insight": "- The registry per-session state resets, so publishing version `1.0.1` (next semver patch) correctly updated the `latest` dist-tag. Publishing huge versions like `99.0.0` broke the version tracking in a way that prevented `latest` from updating.\n- The build system masks secrets in logs (`[MASKED]`),",
+    "approach": "1. **Recon**: Discovered the CI platform has builds, an internal package registry, a locked admin panel, and a pipeline API.\n2. **Artifact leak**: Build `2d50c612c4a4` (deploy-prep) contained a `deploy-notes.txt` with a CI read token (`ctdl-read-*`).\n3. **Pipeline config**: Used the read token on `GET /pipelines/staging` to retrieve the staging pipeline config, which leaked a deploy token (`ctdl-deploy-*`) in the environment, and revealed `@citadel/utils` pinned at version `*` with `lockfile: fa",
+    "tools": [
+      "Python 3 with `requests`, `beautifulsoup4`, `zipfile"
+    ],
+    "missing_tools": [
+      "None \u2014 all required tools were pre-installed."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "kernel{8ad0ae90fbb3a5f29f3e4f4e8cda1849}",
+    "timestamp": "2026-04-09T14:05:43.846146",
+    "cost_usd": 4.01929025,
+    "num_turns": 95,
+    "duration_ms": 1104351,
+    "model": "opus"
+  },
+  {
+    "challenge": "Interceptor Status",
+    "slug": "interceptor-status",
+    "pattern": "Prototype pollution via JSON config merge to escalate from user to admin.",
+    "key_insight": "The server uses a vulnerable deep-merge on the submitted JSON body. Sending `__proto__` as a top-level key pollutes `Object.prototype`, setting `isAdmin: true` on all objects. After pollution, the `/status` endpoint sees the user as admin and returns the flag.",
+    "approach": "The challenge presents a vehicle configuration system backed by Express (Node.js). Users submit JSON config that gets merged server-side. The `/status` endpoint returns different data based on whether the user object has admin privileges.",
+    "tools": [
+      "Python requests"
+    ],
+    "missing_tools": [],
+    "points": 300,
+    "solved": true,
+    "flag": "kernel{a5c40d3ad2d3309e9d2338ee25143930}",
+    "timestamp": "2026-04-09T14:09:51.635067",
+    "cost_usd": 0.21694599999999997,
+    "num_turns": 11,
+    "duration_ms": 49728,
+    "model": "opus"
+  }
+]

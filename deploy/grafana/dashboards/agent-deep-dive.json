@@ -1,0 +1,135 @@
+{
+  "uid": "ctf-agent-dive",
+  "title": "CTF Agent Deep Dive",
+  "tags": ["ctf-guy"],
+  "timezone": "browser",
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "challenge",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "" },
+        "query": "label_values(ctf_tool_calls_total, challenge)",
+        "refresh": 2,
+        "includeAll": false,
+        "current": {}
+      },
+      {
+        "name": "model",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "" },
+        "query": "label_values(ctf_tool_calls_total{challenge=\"$challenge\"}, model)",
+        "refresh": 2,
+        "includeAll": true,
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "solver_id",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "" },
+        "query": "label_values(ctf_tool_calls_total{challenge=\"$challenge\"}, solver_id)",
+        "refresh": 2,
+        "includeAll": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Tool Calls by Type",
+      "type": "piechart",
+      "gridPos": { "h": 10, "w": 8, "x": 0, "y": 0 },
+      "targets": [{
+        "expr": "sum by (tool_name) (ctf_tool_calls_total{challenge=\"$challenge\", model=~\"$model\", solver_id=~\"$solver_id\"})",
+        "refId": "A",
+        "legendFormat": "{{tool_name}}"
+      }],
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } } }
+    },
+    {
+      "id": 2,
+      "title": "Tool Calls by Model",
+      "type": "barchart",
+      "gridPos": { "h": 10, "w": 8, "x": 8, "y": 0 },
+      "targets": [{
+        "expr": "sum by (model, tool_name) (ctf_tool_calls_total{challenge=\"$challenge\", solver_id=~\"$solver_id\"})",
+        "refId": "A",
+        "instant": true,
+        "format": "table",
+        "legendFormat": "{{model}} - {{tool_name}}"
+      }],
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } } }
+    },
+    {
+      "id": 3,
+      "title": "Solve Stats",
+      "type": "table",
+      "gridPos": { "h": 10, "w": 8, "x": 16, "y": 0 },
+      "targets": [
+        {
+          "expr": "ctf_solve_duration_seconds{challenge=\"$challenge\", model=~\"$model\"}",
+          "refId": "A",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "expr": "ctf_solve_cost_usd{challenge=\"$challenge\", model=~\"$model\"}",
+          "refId": "B",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "expr": "ctf_solve_turns{challenge=\"$challenge\", model=~\"$model\"}",
+          "refId": "C",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        { "id": "organize", "options": {
+          "excludeByName": { "Time": true, "__name__": true, "solver_id": true },
+          "renameByName": { "model": "Model", "result": "Result", "challenge": "Challenge" }
+        }}
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Agent Thinking",
+      "type": "logs",
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 10 },
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "" },
+      "targets": [{
+        "expr": "challenge:$challenge AND (solver_id:$solver_id OR NOT _msg:agent*) AND (_msg:agent.text OR _msg:solve*)",
+        "refId": "A"
+      }],
+      "options": {
+        "showTime": true,
+        "sortOrder": "Ascending",
+        "enableLogDetails": true,
+        "showLabels": true
+      }
+    },
+    {
+      "id": 11,
+      "title": "Tool Calls",
+      "type": "logs",
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 24 },
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "" },
+      "targets": [{
+        "expr": "challenge:$challenge AND solver_id:$solver_id AND (_msg:agent.tool_call OR _msg:agent.tool_result)",
+        "refId": "A"
+      }],
+      "options": {
+        "showTime": true,
+        "sortOrder": "Ascending",
+        "enableLogDetails": true,
+        "showLabels": true
+      }
+    }
+  ],
+  "schemaVersion": 39
+}

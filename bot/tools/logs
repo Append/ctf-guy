@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+"""Query VictoriaLogs for challenge solve traces.
+
+Usage:
+  logs <challenge>              # latest run for a challenge
+  logs <challenge> --all        # all events (not just last run)
+  logs <challenge> --manager    # only manager events
+  logs <challenge> --errors     # only errors/policy blocks
+  logs --recent                 # last 5 solve starts across all challenges
+  logs --active                 # currently running solves (recent events)
+"""
+
+import json
+import sys
+import urllib.request
+from datetime import datetime, timedelta
+
+VICTORIA_LOGS_URL = "http://localhost:9428"
+
+
+def query(q, limit=500):
+    url = f"{VICTORIA_LOGS_URL}/select/logsql/query?query={urllib.parse.quote(q)}&limit={limit}"
+    try:
+        with urllib.request.urlopen(url, timeout=5) as r:
+            raw = r.read().decode()
+        if not raw.strip():
+            return []
+        return [json.loads(l) for l in raw.strip().split("\n") if l.strip()]
+    except Exception as e:
+        print(f"Query failed: {e}", file=sys.stderr)
+        return []
+
+
+def format_event(e):
+    t = e["_time"][11:19]
+    msg = e["_msg"]
+    model = e.get("model", "?")
+    sid = e.get("solver_id", "")
+    tag = f"[{model}#{sid}]" if sid else f"[{model}]"
+
+    if msg == "agent.text":
+        return f"{t} {tag} {e.get('text', '')[:160]}"
+    elif msg == "agent.tool_call":
+        tool = e.get("tool_name", "?")
+        args = e.get("args_preview", e.get("args", ""))[:110]
+        marker = " ***SEARCH***" if tool in ("WebSearch", "WebFetch") else ""
+        return f"{t} {tag} TOOL: {tool} -> {args}{marker}"
+    elif "manager" in msg:
+        det = e.get("detector", e.get("detectors", "?"))
+        hint = e.get("hint_preview", "")[:120]
+        return f"{t} **MANAGER [{det}]** {hint}"
+    elif msg == "agent.policy_block":
+        return f"{t} {tag} POLICY BLOCK"
+    elif msg == "agent.error":
+        return f"{t} {tag} ERROR: {e.get('error', '')[:120]}"
+    elif "flag" in msg or "solve." in msg:
+        extra = {k: v for k, v in e.items() if k in ("flag_found", "result", "cost_usd", "duration_ms")}
+        return f"{t} {tag} {msg} {extra if extra else ''}"
+    elif msg == "log" and e.get("level") in ("WARNING", "ERROR"):
+        return f"{t} LOG {e.get('level')}: {e.get('message', '')[:120]}"
+    return None
+
+
+def show_challenge(challenge, show_all=False, manager_only=False, errors_only=False):
+    # Query all case variants — VictoriaLogs is case-sensitive but challenge
+    # names appear in different cases (display name vs directory name)
+    variants = {challenge, challenge.lower(), challenge.upper()}
+    events = []
+    seen_times = set()
+    for variant in variants:
+        for hit in query(f"challenge:{variant}"):
+            t = hit.get("_time")
+            if t not in seen_times:
+                seen_times.add(t)
+                events.append(hit)
+    if not events:
+        # Try wildcard as last resort
+        events = query(f"challenge:re(\"(?i){challenge}\")")
+    if not events:
+        print(f"No events for {challenge}")
+        return
+
+    events.sort(key=lambda e: e.get("_time", ""))
+
+    # Isolate last run unless --all
+    if not show_all:
+        starts = [i for i, e in enumerate(events) if "solve_start" in e.get("_msg", "")]
+        if starts:
+            events = events[starts[-1]:]
+
+    # Filter
+    if manager_only:
+        events = [e for e in events if "manager" in e.get("_msg", "")]
+    elif errors_only:
+        events = [e for e in events if e.get("_msg") in ("agent.error", "agent.policy_block")
+                  or (e.get("_msg") == "log" and e.get("level") in ("WARNING", "ERROR"))]
+
+    # Display
+    for e in events[-50:]:
+        line = format_event(e)
+        if line:
+            print(line)
+
+    # Stats
+    mgr = sum(1 for e in events if "manager" in e.get("_msg", ""))
+    tools = sum(1 for e in events if e["_msg"] == "agent.tool_call")
+    search = sum(1 for e in events if e.get("tool_name", "") in ("WebSearch", "WebFetch"))
+    policy = sum(1 for e in events if e["_msg"] == "agent.policy_block")
+    flag = [e for e in events if "flag" in e.get("_msg", "") and e.get("result")]
+    by_solver = {}
+    for e in events:
+        s = e.get("solver_id", e.get("model", "?"))
+        by_solver.setdefault(s, 0)
+        by_solver[s] += 1
+
+    print()
+    print(f"--- {len(events)} events, {tools} tools, {search} searches, {mgr} manager, {policy} policy ---")
+    print(f"Per solver: {by_solver}")
+    if flag:
+        print(f"FLAG: {flag[0].get('result')}")
+
+
+def show_recent():
+    events = query("_msg:solve.solve_start", limit=20)
+    if not events:
+        print("No recent solves")
+        return
+    events.sort(key=lambda e: e.get("_time", ""))
+    for e in events[-10:]:
+        t = e["_time"][11:19]
+        ch = e.get("challenge", "?")
+        cat = e.get("category", "?")
+        pts = e.get("points", "?")
+        model = e.get("model", "?")
+        print(f"[{t}] {ch} ({cat}, {pts}pt) model={model}")
+
+
+def show_active():
+    # Events in last 2 minutes
+    events = query("(_msg:agent.text OR _msg:agent.tool_call) AND _time:>now-2m", limit=30)
+    if not events:
+        print("No active solves")
+        return
+    events.sort(key=lambda e: e.get("_time", ""))
+    for e in events[-15:]:
+        line = format_event(e)
+        if line:
+            print(line)
+
+
+if __name__ == "__main__":
+    import urllib.parse
+
+    args = sys.argv[1:]
+
+    if not args or "--help" in args or "-h" in args:
+        print(__doc__)
+        sys.exit(0)
+
+    if "--recent" in args:
+        show_recent()
+    elif "--active" in args:
+        show_active()
+    else:
+        challenge = args[0]
+        show_challenge(
+            challenge,
+            show_all="--all" in args,
+            manager_only="--manager" in args,
+            errors_only="--errors" in args,
+        )

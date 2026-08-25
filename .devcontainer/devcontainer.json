@@ -1,0 +1,15 @@
+{
+  "name": "CTF Solver",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/solver/.claude,type=bind",
+    "source=${localEnv:HOME}/.claude.json,target=/home/solver/.claude.json,type=bind"
+  ],
+  "remoteUser": "solver",
+  "workspaceFolder": "/workspaces/ctf-guy"
+}

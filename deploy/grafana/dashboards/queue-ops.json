@@ -1,0 +1,240 @@
+{
+  "uid": "ctf-queue-ops",
+  "title": "CTF Queue Operations",
+  "tags": ["ctf-guy"],
+  "timezone": "browser",
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Queue Depth",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "ctf_queue_depth{status=\"solving\"}", "refId": "A", "legendFormat": "Solving" },
+        { "expr": "ctf_queue_depth{status=\"queued\"}", "refId": "B", "legendFormat": "Queued" },
+        { "expr": "ctf_queue_depth{status=\"solved\"}", "refId": "C", "legendFormat": "Solved" },
+        { "expr": "ctf_queue_depth{status=\"failed\"}", "refId": "D", "legendFormat": "Failed" }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "fillOpacity": 30, "stacking": { "mode": "normal" } } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Solved" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Failed" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Solving" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Queued" }, "properties": [{ "id": "color", "value": { "fixedColor": "purple", "mode": "fixed" } }] }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "title": "Active Solvers",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{
+        "expr": "ctf_active_solvers",
+        "refId": "A",
+        "legendFormat": "Active"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "yellow" },
+          "custom": { "fillOpacity": 20 }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Total Cost",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 8 },
+      "targets": [{ "expr": "max(ctf_solve_cost_usd_total)", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 5 },
+            { "color": "red", "value": 20 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Correct Flags",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 8 },
+      "targets": [{ "expr": "sum(ctf_flag_submissions_total{result=\"correct\"})", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Incorrect Flags",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 8 },
+      "targets": [{ "expr": "sum(ctf_flag_submissions_total{result!=\"correct\"})", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "orange" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }] }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Avg Solve Duration",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 8 },
+      "targets": [{ "expr": "avg(ctf_solve_duration_seconds{result=\"found\"})", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 10,
+      "title": "Solve Duration by Challenge",
+      "type": "barchart",
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 12 },
+      "targets": [{
+        "expr": "ctf_solve_duration_seconds{result=\"found\"}",
+        "refId": "A",
+        "instant": true,
+        "format": "table",
+        "legendFormat": "{{challenge}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "palette-classic" } } },
+      "options": { "xField": "challenge" }
+    },
+    {
+      "id": 11,
+      "title": "Cost by Challenge",
+      "type": "barchart",
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 12 },
+      "targets": [{
+        "expr": "ctf_solve_cost_usd{result=\"found\"}",
+        "refId": "A",
+        "instant": true,
+        "format": "table",
+        "legendFormat": "{{challenge}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "palette-classic" } } },
+      "options": { "xField": "challenge" }
+    },
+    {
+      "id": 20,
+      "title": "Tool Usage by Model",
+      "type": "barchart",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+      "targets": [{
+        "expr": "sum by (model, tool_name) (ctf_tool_calls_total)",
+        "refId": "A",
+        "instant": true,
+        "format": "table",
+        "legendFormat": "{{model}} - {{tool_name}}"
+      }],
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" } } }
+    },
+    {
+      "id": 21,
+      "title": "Token Usage (Codex)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+      "targets": [{
+        "expr": "ctf_tokens_total{model=\"codex\"}",
+        "refId": "A",
+        "legendFormat": "{{direction}}"
+      }],
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 15 } } }
+    },
+    {
+      "id": 30,
+      "title": "Recent Failures",
+      "type": "logs",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 30 },
+      "datasource": { "type": "victoriametrics-logs-datasource", "uid": "" },
+      "targets": [{
+        "expr": "_msg:solve.solve_complete AND flag_found:false",
+        "refId": "A"
+      }],
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true,
+        "showLabels": true
+      }
+    },
+    {
+      "id": 40,
+      "title": "System Memory",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+      "targets": [
+        { "expr": "sys_memory_used_mb", "refId": "A", "legendFormat": "Used" },
+        { "expr": "sys_memory_available_mb", "refId": "B", "legendFormat": "Available" }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "decmbytes", "custom": { "fillOpacity": 20, "stacking": { "mode": "normal" } } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Used" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Available" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] }
+        ]
+      }
+    },
+    {
+      "id": 41,
+      "title": "System Load",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+      "targets": [
+        { "expr": "sys_load_1m", "refId": "A", "legendFormat": "1min" },
+        { "expr": "sys_load_5m", "refId": "B", "legendFormat": "5min" },
+        { "expr": "sys_load_15m", "refId": "C", "legendFormat": "15min" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 10 } } }
+    },
+    {
+      "id": 42,
+      "title": "Solver Processes",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 48 },
+      "targets": [
+        { "expr": "sys_solver_bwrap_count", "refId": "A", "legendFormat": "bwrap" },
+        { "expr": "sys_solver_claude_count", "refId": "B", "legendFormat": "claude" },
+        { "expr": "sys_solver_codex_count", "refId": "C", "legendFormat": "codex" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "fillOpacity": 30 } } }
+    },
+    {
+      "id": 43,
+      "title": "Memory Usage %",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 48 },
+      "targets": [{ "expr": "sys_memory_usage_pct", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent", "min": 0, "max": 100,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 70 },
+            { "color": "red", "value": 90 }
+          ]}
+        }
+      }
+    },
+    {
+      "id": 44,
+      "title": "Disk Free",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 48 },
+      "targets": [{ "expr": "sys_disk_free_gb", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "decgbytes" } }
+    }
+  ],
+  "schemaVersion": 39
+}

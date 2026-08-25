@@ -1,0 +1,32 @@
+.env
+.direnv/
+.playwright-browsers/
+.playwright-cli/
+.playwright-mcp/
+result
+__pycache__/
+*.pyc
+.mypy_cache/
+
+# Challenge files (downloaded per competition, not tracked)
+challenges/
+
+# Solved challenge archive (too large for git)
+archive/
+
+# Bot runtime
+bot/.env
+bot/data/
+bot/.venv/
+bot/pico_*.json
+bot/pico_*.png
+bot/.playwright-cli/
+bot/uv.lock
+bot/.python-version
+bot/.gitignore
+bot/recon_pico.py
+bot/pico_page.html
+bot/main.py
+bot/bot/
+bot/pyghidra_mcp_projects/
+.worktrees/

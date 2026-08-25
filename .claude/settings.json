@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'f=$(jq -r \".tool_response.filePath // .tool_input.file_path\"); [[ \"$f\" == *.py ]] && cd \"$CLAUDE_PROJECT_DIR\" && uv run black --quiet \"$f\" || true'"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'f=$(jq -r \".tool_response.filePath // .tool_input.file_path\"); [[ \"$f\" == *.py ]] && cd \"$CLAUDE_PROJECT_DIR\" && uv run black --quiet \"$f\" || true'"
+          }
+        ]
+      }
+    ]
+  }
+}

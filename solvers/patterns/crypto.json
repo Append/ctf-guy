@@ -1,0 +1,15 @@
+[
+  {
+    "challenge": "ChaCha Slide",
+    "slug": "chacha-slide",
+    "pattern": "",
+    "key_insight": "",
+    "approach": "Classic **Poly1305 nonce reuse forgery** (the \"forbidden attack\").\n\nThe server encrypts two known plaintexts with ChaCha20-Poly1305 using the **same key and nonce**, then asks us to submit a ciphertext that decrypts to a specific goal message.\n\n### Attack Steps\n1. **Recover keystream**: Since we know both plaintexts and ciphertexts, `KS = P1 XOR C1`\n2. **Forge ciphertext**: `C_goal = GOAL XOR KS[:len(GOAL)]`\n3. **Recover Poly1305 (r, s)**: With nonce reuse, the Poly1305 key pair (r, s) is identi",
+    "tools": [],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{7urn_17_84ck_n0w_54e24a92}",
+    "timestamp": "2026-02-28T03:17:48.719328"
+  }
+]

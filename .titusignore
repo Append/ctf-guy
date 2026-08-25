@@ -1,0 +1,39 @@
+# Paths excluded from secret scanning.
+#
+# NOTE: titus --ignore REPLACES its built-in defaults, so the usual build/vendor
+# noise has to be listed here explicitly.
+#
+# Rationale: solver output is not hand-authored and is expected to contain
+# exploit code, credentials from challenge services, and CTF flags. Scanning it
+# produces hundreds of findings that are all working-as-intended, which buries
+# real findings in the code and infra we actually control.
+#
+# Everything hand-authored stays in scope — including deploy/ and scripts/,
+# where the two real secrets found during release prep actually lived.
+
+# --- solver / competition output (expected to look "malicious") ---
+challenges/
+archive/
+solvers/patterns/
+findings.jsonl
+
+# --- dependency + build noise ---
+.venv/
+.direnv/
+node_modules/
+__pycache__/
+*.pyc
+result
+.worktrees/
+.playwright-browsers/
+.playwright-cli/
+.playwright-mcp/
+.ruff_cache/
+.mypy_cache/
+
+# --- lockfiles: upstream hashes and URLs, no authored secrets ---
+uv.lock
+flake.lock
+
+# --- scanner's own datastore ---
+titus.ds/

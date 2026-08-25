@@ -1,0 +1,142 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: discord-alerts
+    receivers:
+      - uid: discord-webhook
+        type: discord
+        settings:
+          url: ${DISCORD_ALERT_WEBHOOK}
+          use_discord_username: true
+          title: "CTF Guy Alert"
+
+policies:
+  - orgId: 1
+    receiver: discord-alerts
+    group_by: ["alertname"]
+    group_wait: 10s
+    group_interval: 1m
+    repeat_interval: 1h
+
+groups:
+  - orgId: 1
+    name: ctf-guy
+    folder: CTF Guy
+    interval: 30s
+    rules:
+      - uid: flag-found
+        title: Flag Found
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 60, to: 0 }
+            datasourceUid: ""
+            model:
+              expr: "increase(ctf_flag_submissions_total{result=\"correct\"}[1m])"
+              refId: A
+              datasource: { type: prometheus }
+          - refId: C
+            relativeTimeRange: { from: 60, to: 0 }
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+                  operator: { type: and }
+                  reducer: { type: max }
+        noDataState: OK
+        execErrState: OK
+        for: 0s
+        labels:
+          severity: info
+        annotations:
+          summary: "A flag was just submitted successfully!"
+
+      - uid: all-failed
+        title: All Solvers Failed
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: ""
+            model:
+              expr: "ctf_queue_depth{status=\"failed\"} > 0 and ctf_queue_depth{status=\"solving\"} == 0 and ctf_queue_depth{status=\"queued\"} == 0"
+              refId: A
+              datasource: { type: prometheus }
+          - refId: C
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+                  operator: { type: and }
+                  reducer: { type: last }
+        noDataState: OK
+        execErrState: OK
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "All solvers finished but none found a flag. Queue is empty with failures."
+
+      - uid: high-cost
+        title: High Cost
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: ""
+            model:
+              expr: "max(ctf_solve_cost_usd_total)"
+              refId: A
+              datasource: { type: prometheus }
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [25] }
+                  operator: { type: and }
+                  reducer: { type: last }
+        noDataState: OK
+        execErrState: OK
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Total solve cost has exceeded $25."
+
+      - uid: codex-rate-limited
+        title: Codex Rate Limited
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: ""
+            model:
+              expr: "increase(ctf_codex_rate_limited[5m])"
+              refId: A
+              datasource: { type: prometheus }
+          - refId: C
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+                  operator: { type: and }
+                  reducer: { type: max }
+        noDataState: OK
+        execErrState: OK
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Codex hit rate limit — auto-disabled. Will resume when cooldown expires."

@@ -1,0 +1,15 @@
+services:
+  ctfd:
+    image: ctfd/ctfd:latest
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=sqlite:////opt/CTFd/CTFd/ctfd.db
+      - SECRET_KEY=testing-secret-key-do-not-use-in-prod
+      - UPLOAD_FOLDER=/opt/CTFd/CTFd/uploads
+    volumes:
+      - ctfd-data:/opt/CTFd/CTFd
+    restart: unless-stopped
+
+volumes:
+  ctfd-data:

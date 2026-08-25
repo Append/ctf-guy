@@ -1,0 +1,1433 @@
+[
+  {
+    "challenge": "DISKO 1",
+    "slug": "disko-1",
+    "pattern": "Flag hidden as a plain string in a FAT32 disk image.",
+    "key_insight": "Always run `strings | grep flag_format` first \u2014 it's the fastest possible solve path for forensics.",
+    "approach": "Downloaded and decompressed the `.dd.gz` disk image, then ran `strings` with a grep for the flag format. Flag was sitting in plaintext.",
+    "tools": [
+      "strings`, `grep"
+    ],
+    "missing_tools": [],
+    "points": 1,
+    "solved": true,
+    "flag": "picoCTF{1t5_ju5t_4_5tr1n9_e3408eef}",
+    "timestamp": "2026-03-20T23:11:32.899415"
+  },
+  {
+    "challenge": "DISKO 2",
+    "slug": "disko-2",
+    "pattern": "Find a flag hidden in the Linux partition of a disk image.",
+    "key_insight": "The flag is stored as a plaintext string in the ext4 filesystem. No mounting needed \u2014 just extract the partition bytes and grep through strings output.",
+    "approach": "The disk image contains two partitions: an ext4 Linux partition and a FAT32 Windows partition. The description hints \"The right one is Linux!\" \u2014 extract the Linux partition and run `strings` to find the flag.",
+    "tools": [
+      "fdisk` \u2014 partition table inspection",
+      "dd` \u2014 partition extraction",
+      "strings` + `grep` \u2014 flag search"
+    ],
+    "missing_tools": [],
+    "points": 1,
+    "solved": true,
+    "flag": "picoCTF{4_P4Rt_1t_i5_90a3f3d1}",
+    "timestamp": "2026-03-20T23:53:53.684510"
+  },
+  {
+    "challenge": "DISKO 3",
+    "slug": "disko-3",
+    "pattern": "Extract a gzipped flag file from a FAT32 disk image.",
+    "key_insight": "The challenge description says \"its not as plain as you think\" \u2014 the flag is gzip-compressed rather than stored as plaintext, so a simple `strings | grep` won't find it. Parsing the FAT32 directory entries reveals the `FLAG.GZ` file which contains the flag.",
+    "approach": "1. Downloaded and decompressed `disko-3.dd.gz` to get a 100MB FAT32 disk image.\n2. Parsed the FAT32 directory structure manually \u2014 the image contains a `/log/` directory with many log files.\n3. Found a `FLAG.GZ` file (78 bytes) at cluster 33252 in the log directory.\n4. Extracted the raw bytes at that cluster offset and decompressed with gzip.",
+    "tools": [
+      "Python 3 (struct, gzip) for FAT32 parsing and decompression",
+      "strings`, `file` for initial triage"
+    ],
+    "missing_tools": [],
+    "points": 1,
+    "solved": true,
+    "flag": "picoCTF{n3v3r_z1p_2_h1d3_654235e0}",
+    "timestamp": "2026-03-20T23:52:28.479129"
+  },
+  {
+    "challenge": "Flag in Flame",
+    "slug": "flag-in-flame",
+    "pattern": "A seemingly innocent \"logs.txt\" file containing base64-encoded data. Decoding reveals a PNG image that appears to be noise or random data. The actual flag is hidden as hexadecimal text encoded in the ",
+    "key_insight": "The PNG image was not meant to be viewed as a normal image. Instead, the pixel values encoded hexadecimal text that was only readable after:\n1. Inverting the color space (white became black, black became white)\n2. Applying OCR to the processed image\n\nThis revealed the flag encoded as hex: `7069636f4",
+    "approach": "1. **Downloaded and examined the file** - `logs.txt` was identified as base64-encoded data\n2. **Decoded base64** - Revealed a PNG image (896x1152 pixels)\n3. **Initial image analysis** - The PNG appeared to contain only noise/grayscale data with no obvious text\n4. **Applied image processing** - Tried multiple techniques:\n   - Inversion (RGB inversion)\n   - High contrast enhancement\n   - Histogram equalization\n   - Color channel extraction\n5. **OCR extraction** - Used Tesseract OCR on processed im",
+    "tools": [
+      "base64` - Decoding the initial file",
+      "PIL/Pillow` - Image manipulation and processing",
+      "Tesseract` - OCR (Optical Character Recognition)",
+      "Python - Image analysis and hex decoding"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{forensics_analysis_is_amazing_5ccc7cb0}",
+    "timestamp": "2026-03-21T23:35:16.155273"
+  },
+  {
+    "challenge": "Hidden in plainsight",
+    "slug": "hidden-in-plainsight",
+    "pattern": "Extract hidden data from a JPEG image protected by steghide steganography.",
+    "key_insight": "The challenge \"hides in plain sight\" by:\n- Using JPEG metadata (comment field) as a hint\n- Base64-encoding both the tool name and password\n- Requiring two levels of base64 decoding before steganography extraction",
+    "approach": "### Triage\nStarted with standard forensic triage on the JPG:\n1. `file` \u2014 confirmed JPEG image\n2. `exiftool` \u2014 found suspicious comment field containing base64\n\n### Key Discovery\nThe JPEG comment field contained: `c3RlZ2hpZGU6Y0VGNmVuZHZjbVE9`\n\n### Decoding Pipeline\n1. Decoded first base64 layer: `c3RlZ2hpZGU6Y0VGNmVuZHZjbVE9` \u2192 `steghide:cEF6endvcmQ=`\n2. This revealed steghide was used with a base64-encoded password\n3. Decoded second base64 layer: `cEF6endvcmQ=` \u2192 `pAzzword`\n4. Used steghide wit",
+    "tools": [
+      "exiftool` \u2014 read JPEG metadata",
+      "base64` \u2014 decode comment and password",
+      "steghide` \u2014 extract hidden data"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{h1dd3n_1n_1m4g3_5d4cba73}",
+    "timestamp": "2026-03-21T23:29:44.784850"
+  },
+  {
+    "challenge": "MacroHard WeakEdge",
+    "slug": "macrohard-weakedge",
+    "pattern": "A PPTM (PowerPoint macro-enabled file) forensics challenge where the flag is hidden in a base64-encoded file within the ZIP archive structure.",
+    "key_insight": "The challenge name \"MacroHard WeakEdge\" is a pun pointing to PowerPoint and a \"weak edge\" in the file structure. Rather than searching for VBA macros, the actual flag was hidden in a plaintext base64-encoded file within the ZIP archive. The trick is recognizing that PPTM files are just ZIP files and",
+    "approach": "1. Recognized that PPTM files are ZIP archives containing XML and binary files\n2. Extracted the PPTM using `unzip` and examined the directory structure\n3. Found a `hidden` file in `ppt/slideMasters/` directory\n4. Decoded the file from base64 (with spaces removed and padding added) to reveal the flag",
+    "tools": [
+      "unzip` - Extract PPTM file",
+      "zipfile` (Python) - Read files from ZIP archive",
+      "base64` (Python) - Decode base64-encoded content",
+      "xxd` - Inspect file contents"
+    ],
+    "missing_tools": [],
+    "points": 60,
+    "solved": true,
+    "flag": "picoCTF{D1d_u_kn0w_ppts_r_z1p5}",
+    "timestamp": "2026-03-21T23:27:16.481283"
+  },
+  {
+    "challenge": "Matryoshka Doll",
+    "slug": "matryoshka-doll",
+    "pattern": "Image file with recursively nested ZIP archives \u2014 extract all layers to find the flag in the innermost image.",
+    "key_insight": "Classic file-in-file nesting (matryoshka/Russian doll pattern). Each layer is a PNG with a ZIP appended after the IEND chunk. Python's `zipfile` module can extract directly from the offset without needing binwalk.",
+    "approach": "The challenge provides `dolls.jpg` (actually a PNG). Running `binwalk` reveals a ZIP archive appended after the image data. Each extracted ZIP contains another image with yet another embedded ZIP, four layers deep total:\n\n1. `dolls.jpg` \u2192 ZIP \u2192 `2_c.jpg`\n2. `2_c.jpg` \u2192 ZIP \u2192 `3_c.jpg`\n3. `3_c.jpg` \u2192 ZIP \u2192 `4_c.jpg`\n4. `4_c.jpg` \u2192 flag in strings",
+    "tools": [
+      "binwalk` \u2014 identify embedded files",
+      "strings` \u2014 search for flag text",
+      "Python `zipfile` \u2014 extract nested archives"
+    ],
+    "missing_tools": [],
+    "points": 30,
+    "solved": true,
+    "flag": "picoCTF{LL9lb1dR4QbGe4l4iWCvGq9pdtwt7392}",
+    "timestamp": "2026-03-21T00:04:22.359499"
+  },
+  {
+    "challenge": "Ph4nt0m 1ntrud3r",
+    "slug": "ph4nt0m-1ntrud3r",
+    "pattern": "Flag hidden in base64-encoded TCP SYN packet payloads, ordered by timestamp.",
+    "key_insight": "The challenge description hints at timing (\"well timely manner\"). Sorting packets by their capture timestamp and decoding the base64 payloads reveals the flag in the latter half of the sorted sequence.",
+    "approach": "The PCAP contains 22 crafted TCP SYN packets from 192.168.0.2:20 to 192.168.1.2:80. Each packet carries a base64-encoded payload \u2014 unusual for SYN packets. Packets are out of order in the capture file but their timestamps reveal the correct sequence.\n\nSorting by timestamp and decoding the base64 payloads: earlier packets contain random binary junk (noise/decoy), while the later packets decode to readable ASCII forming the flag.",
+    "tools": [
+      "tshark (packet inspection)",
+      "Python 3 + base64 module (decoding)",
+      "scapy (solve script)"
+    ],
+    "missing_tools": [],
+    "points": 50,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-03-21T22:29:13.889216"
+  },
+  {
+    "challenge": "Ph4nt0m 1ntrud3r",
+    "slug": "phantom-intruder",
+    "pattern": "",
+    "key_insight": "",
+    "approach": "22 TCP SYN packets, all within the same second, each carrying a base64 chunk in the TCP payload. Packets are out of order in the capture file.\n\n1. Extracted timestamp + TCP payload from each packet\n2. Sorted by `frame.time_epoch` ascending\n3. Decoded hex payload to ASCII \u2014 each is a base64 chunk\n4. First 15 packets are noise/decoys (decode to random bytes)\n5. Packets 16-22 (the last 7 by timestamp) each decode to a flag fragment:\n   `picoCTF` + `{1t_w4s` + `nt_th4t` + `_34sy_t` + `bh_4r_e` + `5e",
+    "tools": [],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{1t_w4snt_th4t_34sy_tbh_4r_e5e8c78d}",
+    "timestamp": "2026-02-28T03:12:38.286906"
+  },
+  {
+    "challenge": "RED",
+    "slug": "red",
+    "pattern": "A PNG image containing hidden data in the RGBA LSB (Least Significant Bits) layer, encoded as base64.",
+    "key_insight": "The challenge title \"RED, RED, RED, RED\" was a red herring\u2014the actual flag wasn't hidden in the red channel but in the RGBA (all channels) LSB layer. The image appears visually red but contains structured data hidden in all four channels at the bit level.",
+    "approach": "1. **Triage**: Downloaded the red.png image (796 bytes)\n2. **File analysis**: Ran exiftool and found a poem in the PNG metadata\n3. **Steganography detection**: Used `zsteg` to scan for hidden data across different bit planes and color channels\n4. **Discovery**: Found base64-encoded text in the `b1,rgba,lsb,xy` (RGBA LSB layer with XY bit ordering)\n5. **Decoding**: Decoded the base64 string to reveal the flag",
+    "tools": [
+      "zsteg`: PNG steganography analysis and extraction",
+      "python3`: base64 decoding",
+      "exiftool`: metadata inspection"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{r3d_1s_th3_ult1m4t3_cur3_f0r_54dn355_}",
+    "timestamp": "2026-03-21T23:44:45.255996"
+  },
+  {
+    "challenge": "Riddle Registry",
+    "slug": "riddle-registry",
+    "pattern": "",
+    "key_insight": "The flag was hidden in the PDF's `Author` metadata field as a base64-encoded string. This is a common steganography technique\u2014embedding data in file metadata rather than the file content itself.",
+    "approach": "1. Downloaded the PDF file from the provided URL\n2. Used `exiftool` to extract all metadata from the PDF\n3. Found the flag base64-encoded in the `Author` metadata field\n4. Decoded the base64 string to reveal the plaintext flag",
+    "tools": [
+      "curl` \u2014 Download the PDF file",
+      "exiftool` \u2014 Extract PDF metadata",
+      "base64` \u2014 Decode the base64-encoded flag"
+    ],
+    "missing_tools": [],
+    "points": 50,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-03-21T23:21:42.844699"
+  },
+  {
+    "challenge": "Scan Surprise",
+    "slug": "scan-surprise",
+    "pattern": "",
+    "key_insight": "\"Scan\" in the title = QR code. Just decode the image.",
+    "approach": "The challenge provides `flag.png` \u2014 a 99x99, 1-bit PNG. Dimensions and bit depth are classic QR code indicators. Decoded with `zbarimg`.",
+    "tools": [
+      "zbarimg` (from `zbar` package via nix)"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{p33k_@_b00_7843f77c}",
+    "timestamp": "2026-03-21T00:00:17.531507"
+  },
+  {
+    "challenge": "Trivial Flag Transfer Protocol",
+    "slug": "trivial-flag-transfer-protocol",
+    "pattern": "Extract a hidden flag from BMP images transferred via TFTP, using steganography (steghide) with a passphrase recovered from an encoded hint file.",
+    "key_insight": "1. **Multi-layer encoding:** The challenge used ROT13 for hints, TFTP for file transfer, steghide for flag hiding, and a passphrase for encryption\n2. **Hint interpretation:** \"Check out the photos\" pointed to the BMP image files\n3. **Passphrase extraction:** The passphrase was embedded in the plan f",
+    "approach": "### Step 1: Analyze the PCAP File\n- Examined `tftp.pcapng` containing TFTP traffic\n- Used tshark to extract transferred files from the network capture\n- Found three BMP files (picture1.bmp, picture2.bmp, picture3.bmp), one .deb file (program.deb), and a plan file\n\n### Step 2: Decode Hints\n- Found `instructions.txt` and `plan` file in the extracted TFTP data\n- Both files used **ROT13 encoding**\n- Decoded instructions: \"TFTP DOESN'T ENCRYPT OUR TRAFFIC SO WE MUST DISGUISE OUR FLAG TRANSFER. FIGURE",
+    "tools": [
+      "tshark:** For extracting TFTP traffic and files",
+      "steghide:** For extracting hidden data from steganographically encoded images",
+      "ROT13 decoder:** For decoding hint files"
+    ],
+    "missing_tools": [],
+    "points": 90,
+    "solved": true,
+    "flag": "picoCTF{h1dd3n_1n_pLa1n_51GHT_18375919}",
+    "timestamp": "2026-03-21T23:45:09.371619"
+  },
+  {
+    "challenge": "tunn3l v1s10n",
+    "slug": "tunn3l-v1s10n",
+    "pattern": "Corrupted BMP file with tampered headers hiding the full image containing the flag.",
+    "key_insight": "The BMP had two layers of corruption: broken header fields preventing it from opening, and a reduced height hiding the flag text in the upper portion of the image. The decoy text \"notaflag{sorry}\" in the visible lower portion was a red herring.",
+    "approach": "1. `file` identified it as data (not a valid BMP) despite the `BM` magic bytes.\n2. Hex inspection revealed the BMP header had two fields set to `0xD0BA` instead of correct values:\n   - **Pixel data offset** (offset 10): should be `0x36` (54 bytes)\n   - **DIB header size** (offset 14): should be `0x28` (40 bytes for BITMAPINFOHEADER)\n3. The image height was also truncated to 306 \u2014 recalculating from image data size (2,893,400 bytes) and row width (3,404 bytes) gave the true height of **850**.\n4. ",
+    "tools": [
+      "xxd` for hex analysis",
+      "Python `struct` for binary patching",
+      "ImageMagick for BMP\u2192PNG conversion"
+    ],
+    "missing_tools": [],
+    "points": 40,
+    "solved": true,
+    "flag": "picoCTF{qu1t3_a_v13w_2020}",
+    "timestamp": "2026-03-21T20:58:07.193433"
+  },
+  {
+    "challenge": "Verify (50pts, Forensics)",
+    "slug": "verify",
+    "pattern": "",
+    "key_insight": "The `files/` directory contains ~250 decoy files, all 64 bytes. Only one matches the provided SHA-256 hash. The decrypt script uses a hardcoded key (`picoCTF`) so any file will \"decrypt\" \u2014 the checksum verification is what ensures you get the real flag.",
+    "approach": "1. Launch the on-demand instance to get SSH credentials\n2. SSH in and find the `checksum.txt` with the target hash: `b09c99c555e2b39a7e97849181e8996bc6a62501f0149c32447d8e65e205d6d2`\n3. Run `sha256sum files/*` and grep for the matching hash \u2014 file was `451fd69b`\n4. Run the provided `decrypt.sh` on that file (uses `openssl aes-256-cbc` with key `picoCTF`)",
+    "tools": [
+      "sha256sum`, `grep` \u2014 checksum verification",
+      "openssl` (via provided `decrypt.sh`) \u2014 AES-256-CBC decryption"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{trust_but_verify_451fd69b}",
+    "timestamp": "2026-03-21T22:15:12.003480"
+  },
+  {
+    "challenge": "Weird File",
+    "slug": "weird-file",
+    "pattern": "A macro-enabled Word document (.docm) contains a VBA macro that executes a Python command with a base64-encoded flag.",
+    "key_insight": "The challenge title \"in-the-clear\" hints that the flag is stored unencrypted (just base64-encoded) inside the VBA macro \u2014 no need to actually run the macro.",
+    "approach": "1. The .docm is a ZIP archive containing `word/vbaProject.bin` \u2014 an OLE file with VBA macro source.\n2. Extracted the VBA binary and decompressed the macro source from the `VBA/ThisDocument` stream.\n3. The `AutoOpen` macro calls `Shell(\"python -c 'print(\\\"cGljb0NURnttNGNyMHNfcl9kNG5nM3IwdXN9\\\")'\")`.\n4. Base64-decoded the string to get the flag.",
+    "tools": [
+      "unzip` \u2014 extract docm contents",
+      "strings` \u2014 find the base64 payload in the OLE binary",
+      "base64` \u2014 decode the flag",
+      "olefile` (Python) \u2014 parse the VBA project binary for full macro source"
+    ],
+    "missing_tools": [],
+    "points": 20,
+    "solved": true,
+    "flag": "picoCTF{m4cr0s_r_d4ng3r0us}",
+    "timestamp": "2026-03-20T23:58:04.825452"
+  },
+  {
+    "challenge": "Wireshark doo dooo do doo",
+    "slug": "wireshark-doo-dooo-do-doo",
+    "pattern": "",
+    "key_insight": "The title \"doo dooo do doo\" was a morse code hint, but the actual challenge was simpler: find the unencrypted HTTP response and apply ROT13 decoding. The PCAP contained mostly encrypted traffic, but filtering by source IP revealed the plaintext flag hidden in a web server response.",
+    "approach": "1. **Triage the PCAP** - Identified that the capture contained mostly Kerberos-encrypted WinRM traffic and some plain HTTP traffic to an external server (18.222.37.134)\n\n2. **Extract HTTP Response** - Used tshark to filter traffic from the external server:\n   ```bash\n   tshark -r shark1.pcapng -Y 'ip.src==18.222.37.134' -x\n   ```\n\n3. **Decode ROT13** - Found the HTTP response body contained ROT13-encoded text:\n   ```\n   Gur synt vf cvpbPGS{c33xno00_1_f33_h_qrnqorrs}\n   ```\n\n4. **Extract Flag** -",
+    "tools": [
+      "tshark** - PCAP packet analysis and filtering",
+      "Python codecs** - ROT13 decoding",
+      "grep/regex** - Pattern matching in hex dumps"
+    ],
+    "missing_tools": [],
+    "points": 50,
+    "solved": true,
+    "flag": "picoCTF{p33kab00_1_s33_u_deadbeef}",
+    "timestamp": "2026-03-21T23:23:25.932011"
+  },
+  {
+    "challenge": "CanYouSee",
+    "slug": "canyousee",
+    "pattern": "",
+    "key_insight": "EXIF metadata fields like Attribution URL, Comments, and Copyright can carry arbitrary data. Many forensics challenges hide flags in \"obvious\" metadata rather than performing complex pixel analysis or embedded file extraction. Always check metadata first\u2014it's often the fastest path.",
+    "approach": "The challenge provided a 2.3MB JPEG file (`ukn_reality.jpg`) in a ZIP archive. The \"hide and seek\" theme suggested hidden metadata rather than pixel-level steganography.\n\n**Triage:** Ran `exiftool` on the image to extract all metadata fields. The key discovery was the **Attribution URL** field containing a base64-encoded string:\n```\ncGljb0NURntNRTc0RDQ3QV9ISUREM01fYTZkZjhkYjh9Cg==\n```\n\n**Decoding:** Simple base64 decode yielded the flag directly.",
+    "tools": [
+      "exiftool` \u2014 EXIF metadata extraction",
+      "base64` \u2014 decoding"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{ME74D47A_HIDD3N_a6df8db8}",
+    "timestamp": "2026-03-24T00:40:26.477513"
+  },
+  {
+    "challenge": "PcapPoisoning (100pts, Forensics)",
+    "slug": "pcappoisoning",
+    "pattern": "Extract a hidden flag from a PCAP network capture file using string extraction.",
+    "key_insight": "The flag wasn't hidden in complex packet analysis or protocol-level steganography. Instead, it was embedded directly in the PCAP file's raw binary data as a readable string. The challenge name \"PcapPoisoning\" hints at \"poisoned\" data embedded within the otherwise legitimate network capture.",
+    "approach": "1. Ran `file` command to identify the file type \u2192 PCAP capture file\n2. Ran `strings` on the PCAP to extract all readable strings\n3. Grepped for \"picoCTF\" pattern \u2192 found the flag embedded in the raw binary data",
+    "tools": [
+      "file` \u2014 identify file type",
+      "strings` \u2014 extract readable strings from binary files",
+      "grep` \u2014 pattern matching"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{P64P_4N4L7S1S_SU55355FUL_4d72dfcc}",
+    "timestamp": "2026-03-24T11:20:03.502707"
+  },
+  {
+    "challenge": "Lookey Here (100pts, Forensics)",
+    "slug": "lookey-here",
+    "pattern": "Find a hidden flag buried in Ayn Rand's \"Anthem\" \u2014 a 107KB text file.",
+    "key_insight": "This is a classic steganography-by-volume challenge. The flag isn't encoded, encrypted, or hidden in metadata \u2014 it's simply embedded as plain text (`picoCTF{...}`) in the middle of a 107KB novel. The challenge tests pattern recognition and the ability to extract data from large files efficiently.",
+    "approach": "The challenge description hints that \"attackers have hidden information in a very large mass of data.\" The file `anthem.flag.txt` contains the full text of \"Anthem\" with the flag embedded as a single line.\n\nStandard forensics triage (strings + grep) immediately reveals the flag:\n```\nstrings anthem.flag.txt | grep picoCTF\n```\n\nThe title \"Lookey here\" is a hint to use `grep` (or look carefully) to find the hidden data.",
+    "tools": [
+      "strings` \u2014 extract printable strings from text files",
+      "grep` \u2014 pattern matching to find the flag"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-03-24T11:20:07.846997"
+  },
+  {
+    "challenge": "Packets Primer (100pts, Forensics)",
+    "slug": "packets-primer",
+    "pattern": "",
+    "key_insight": "The flag is transmitted as a raw TCP payload with spaces between each character. The challenge tests:\n- Understanding PCAP file structure\n- Using `tshark` for packet extraction\n- Basic hex-to-ASCII conversion and data cleaning",
+    "approach": "1. **Triage:** Identified a PCAP file with 9 total frames, mostly TCP handshake traffic\n2. **Protocol Analysis:** Used `tshark` to examine TCP streams and find the payload\n3. **Data Extraction:** Located the TCP payload in the PSH+ACK packet (packet #4)\n4. **Decoding:** Extracted raw TCP payload as hex, converted to ASCII, then removed spaces",
+    "tools": [
+      "tshark` \u2014 packet analysis (extract TCP streams and payloads)",
+      "xxd` \u2014 hex-to-ASCII conversion",
+      "tr` \u2014 character removal (removing spaces)",
+      "Python 3 \u2014 automation script"
+    ],
+    "missing_tools": [
+      "None \u2014 all tools available in the standard flake environment."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{p4ck37_5h4rk_ceccaa7f}",
+    "timestamp": "2026-03-24T11:20:05.698853"
+  },
+  {
+    "challenge": "hideme",
+    "slug": "hideme",
+    "pattern": "PNG file with a ZIP archive appended after the IEND chunk, containing a hidden image with the flag.",
+    "key_insight": "The \"more than meets the eye\" hint pointed to data appended after the PNG IEND marker. PNG viewers ignore trailing data, but binwalk catches it. Classic steganography technique \u2014 polyglot file (PNG + ZIP).",
+    "approach": "1. Ran `binwalk` on `flag.png` \u2014 detected a ZIP archive at offset 0x9B3B after the PNG data\n2. Extracted the ZIP, which contained `secret/flag.png`\n3. The hidden image displayed the flag as rendered text",
+    "tools": [
+      "binwalk` \u2014 embedded file detection and extraction",
+      "exiftool` \u2014 metadata check (also flagged \"trailer data after PNG IEND chunk\")",
+      "imagemagick` \u2014 enlarging the extracted image for readability"
+    ],
+    "missing_tools": [
+      "None \u2014 all tools were available in the flake."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{Hiddinng_An_imag3_within_@n_ima9e_cda72af0}",
+    "timestamp": "2026-03-24T13:40:39.549106"
+  },
+  {
+    "challenge": "Redaction Gone Wrong",
+    "slug": "redaction-gone-wrong",
+    "pattern": "PDF with fake redactions \u2014 text was painted over in MS Word but not actually removed.",
+    "key_insight": "Painting over text in a word processor doesn't remove it from the PDF text stream. Proper redaction requires tools that actually strip the text content (e.g., Adobe Acrobat's redaction tool).",
+    "approach": "Extracted text from the PDF with `pdftotext`. The \"redacted\" text is still in the document layer, just visually covered by a black rectangle. `pdftotext` ignores the visual overlay and dumps the raw text content.",
+    "tools": [
+      "pdftotext` (from `poppler-utils`, via `nix-shell -p poppler-utils`)"
+    ],
+    "missing_tools": [
+      "poppler-utils` \u2014 not in the flake, used via `nix-shell -p poppler-utils"
+    ],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{C4n_Y0u_S33_m3_fully}",
+    "timestamp": "2026-03-24T13:43:19.697473"
+  },
+  {
+    "challenge": "Binary Digits",
+    "slug": "binary-digits",
+    "pattern": "ASCII binary string encodes a JPEG image containing the flag.",
+    "key_insight": "\"Binary digits\" is literal \u2014 the file is a binary (base-2) representation of a JPEG's raw bytes.",
+    "approach": "The file contains 71,000 ASCII '0' and '1' characters. Grouping into 8-bit chunks and converting to bytes yields 8,875 bytes starting with `FF D8 FF E0` \u2014 a JFIF JPEG. Opening the image reveals the flag in red text.",
+    "tools": [
+      "Python 3 (int/bytes conversion)",
+      "file, exiftool"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{h1dd3n_1n_th3_b1n4ry_3d2e65ba}",
+    "timestamp": "2026-03-24T13:58:01.929396"
+  },
+  {
+    "challenge": "Timeline 0",
+    "slug": "timeline-0",
+    "pattern": "Find a hidden file in an ext4 disk image by building a filesystem timeline and spotting an anomalous timestamp.",
+    "key_insight": "The challenge name \"Timeline\" is a direct hint to build a MAC timeline (Modified/Accessed/Changed/Born). The planted file stands out immediately because its timestamps are from 1985, decades before everything else on the system.",
+    "approach": "1. Downloaded and decompressed `partition4.img.gz` \u2014 an ext4 filesystem image.\n2. Used sleuthkit's `fls` to enumerate all files with MAC timestamps, piped through `mactime` to build a sorted timeline.\n3. Spotted `/bin/bcab` (inode 4945) \u2014 a 41-byte file with all four timestamps (MACB) set to **1985-01-01**, clearly anomalous among a system from 2025.\n4. Extracted the file content using `icat partition4.img 4945` \u2014 contained a base64 string.\n5. Decoded: `71m311n3_0u7113r_h3r_43a2e7af` (leetspeak ",
+    "tools": [
+      "sleuthkit (`fls`, `mactime`, `icat`) \u2014 via `nix-shell -p sleuthkit",
+      "base64 (coreutils)"
+    ],
+    "missing_tools": [
+      "sleuthkit` \u2014 not in the flake, used via `nix-shell -p sleuthkit"
+    ],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{71m311n3_0u7113r_h3r_43a2e7af}",
+    "timestamp": "2026-03-24T13:59:52.024495"
+  },
+  {
+    "challenge": "Enhance!",
+    "slug": "enhance",
+    "pattern": "SVG file hides the flag in text elements rendered at microscopic font size in white color.",
+    "key_insight": "\"Enhance!\" is the hint \u2014 you need to look closer (at the source). The flag is technically *in* the image, just at a scale and color that makes it invisible to viewers.",
+    "approach": "Opened the SVG as plaintext. The flag is split across `<tspan>` elements inside a `<text>` block with `font-size:0.00352781px` and `fill:#ffffff` (white on white). Completely invisible when rendered normally, but trivially readable in the source.",
+    "tools": [
+      "Text editor / `grep"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{3nh4nc3d_24374675}",
+    "timestamp": "2026-03-24T14:03:31.073000"
+  },
+  {
+    "challenge": "File Types (100pts, Forensics)",
+    "slug": "file-types",
+    "pattern": "A \"PDF\" that's actually a shell archive wrapping 10+ nested compression/archive layers, ending in a hex-encoded flag.",
+    "key_insight": "The challenge name says it all: \"file types\". It's a matryoshka doll of different archive/compression formats. The `file` command is the key tool \u2014 use it after each extraction to determine the next format.",
+    "approach": "1. `file Flag.pdf` revealed it's a shell archive (shar), not a PDF\n2. Extracted the uuencoded payload from the shar (avoids needing `uudecode` binary)\n3. Iteratively identified and decompressed each layer using `file` to detect the format:\n   - ar \u2192 cpio \u2192 bzip2 \u2192 gzip \u2192 lzip \u2192 LZ4 \u2192 LZMA \u2192 lzop \u2192 lzip \u2192 XZ \u2192 ASCII text\n4. Final layer was hex-encoded ASCII \u2014 decoded to get the flag",
+    "tools": [
+      "file`, `python3` (uu module), `ar`, `cpio`, `bzip2`, `gzip`, `lzip`, `lz4`, `lzma`, `lzop`, `xz"
+    ],
+    "missing_tools": [
+      "lzip`, `lzop`, `lz4` \u2014 not in the flake, used `nix-shell -p lzip lzop lz4"
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{f1len@m3_m@n1pul@t10n_f0r_0b2cur17y_950c4fee}",
+    "timestamp": "2026-03-24T14:05:07.426346"
+  },
+  {
+    "challenge": "Secret of the Polyglot",
+    "slug": "secret-of-the-polyglot",
+    "pattern": "PNG/PDF polyglot file \u2014 each format contains half the flag.",
+    "key_insight": "A polyglot file is valid in multiple formats simultaneously. PNG parsers read from the start (PNG header), PDF parsers find `%PDF` marker wherever it appears. The flag is split across both interpretations.",
+    "approach": "1. `file` identifies it as PNG despite `.pdf` extension\n2. `grep -boa '%PDF'` finds PDF header at offset 914 (after PNG IEND chunk)\n3. View as PNG \u2192 first half: `picoCTF{f1u3n7_`\n4. Extract and view PDF \u2192 second half: `1n_pn9_&_pdf_1f991f77}`\n5. Concatenate both halves",
+    "tools": [
+      "file`, `grep`, `dd` \u2014 triage and extraction",
+      "ImageMagick `convert` \u2014 enlarge tiny 50x50 PNG for readability",
+      "PDF viewer \u2014 read text from PDF portion"
+    ],
+    "missing_tools": [
+      "ImageMagick (used via `nix-shell -p imagemagick`)"
+    ],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-03-24T14:10:53.416370"
+  },
+  {
+    "challenge": "Corrupted file",
+    "slug": "corrupted-file",
+    "pattern": "Repair a corrupted JPEG file by fixing the magic bytes, then read the flag embedded in the image.",
+    "key_insight": "The challenge description \"a couple of bytes could make all the difference\" was literal \u2014 two corrupted magic bytes prevented the JPEG from being recognized. Once fixed, the image revealed the flag as plain text.",
+    "approach": "1. **Triage**: `file` reported \"data\" \u2014 not recognized as any format\n2. **Analysis**: `xxd` revealed `5C 78` followed by JFIF header \u2014 classic JPEG structure with corrupted first two bytes\n3. **Fix**: Replaced first two bytes with `FF D8` (JPEG SOI marker)\n4. **Extraction**: Opened fixed JPEG to find the flag rendered as red text on white background",
+    "tools": [
+      "xxd` \u2014 hex inspection",
+      "Python \u2014 byte patching",
+      "Pillow \u2014 image viewing/conversion"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{r3st0r1ng_th3_by73s_939a65f5}",
+    "timestamp": "2026-03-24T14:25:56.152324"
+  },
+  {
+    "challenge": "Disk, disk, sleuth! (110pts, Forensics)",
+    "slug": "disk-disk-sleuth",
+    "pattern": "Find a flag hidden in a disk image using sleuthkit's `srch_strings` tool.",
+    "key_insight": "The `srch_strings` tool from sleuthkit is designed to extract strings from unallocated space, metadata, and raw file contents\u2014exactly what's needed here. The flag was not hidden in a specific file but existed somewhere within the disk image's raw data.",
+    "approach": "The challenge explicitly directs the solver to use `srch_strings` from sleuthkit and \"some terminal-fu\" to locate the flag in the disk image. The solution is straightforward:\n\n1. Decompress the gzipped disk image (`dds1-alpine.flag.img.gz`)\n2. Use `srch_strings` to search for all printable strings in the disk image\n3. Filter for the flag pattern (`picoCTF{...}`)\n\nThe flag was found embedded in the disk image and extracted via string search.",
+    "tools": [
+      "gunzip` \u2014 decompress the disk image",
+      "srch_strings` (sleuthkit) \u2014 extract strings from the disk image",
+      "grep` \u2014 filter for the flag pattern"
+    ],
+    "missing_tools": [
+      "None \u2014 all required tools were available in the environment."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-03-24T15:11:32.283750"
+  },
+  {
+    "challenge": "What Lies Within",
+    "slug": "what-lies-within",
+    "pattern": "A PNG image contains a hidden flag embedded in the least significant bits (LSB) of the RGB pixel channels using steganography.",
+    "key_insight": "Classic LSB steganography in PNG images. The flag was encoded in the least significant bit of each pixel's RGB values. `zsteg` systematically checks various bit planes and color channel combinations to surface hidden data.",
+    "approach": "The challenge title \"What Lies Within\" hints at data hidden inside the image file. Standard triage steps were taken:\n\n1. **File type identification:** `file` command identified the file as a PNG image\n2. **String search:** Quick grep for common flag patterns (strings contain no plaintext flag)\n3. **Metadata check:** `exiftool` showed standard PNG metadata, no hidden fields\n4. **Binwalk analysis:** No embedded files detected\n5. **Steganography analysis:** Used `zsteg` (PNG/GIF steganography analy",
+    "tools": [
+      "file` \u2014 File type identification",
+      "strings` \u2014 String extraction (initial check)",
+      "exiftool` \u2014 Metadata extraction",
+      "binwalk` \u2014 Embedded file detection",
+      "zsteg`** \u2014 PNG/GIF LSB steganography analysis (the solve tool)"
+    ],
+    "missing_tools": [],
+    "points": 150,
+    "solved": true,
+    "flag": "picoCTF{h1d1ng_1n_th3_b1t5}",
+    "timestamp": "2026-03-24T15:11:48.312786"
+  },
+  {
+    "challenge": "Surfing the Waves",
+    "slug": "surfing-the-waves",
+    "pattern": "Audio forensics challenge where hexadecimal data is encoded as amplitude levels in a WAV file. Each audio sample represents a hex digit (0-15), with amplitudes ranging from ~1000 to ~8500.",
+    "key_insight": "The audio file doesn't use traditional modulation (FSK, DTMF, etc.). Instead, it's a simple amplitude-based encoding where each sample's amplitude directly encodes a hex digit. This is more akin to PCM audio encoding raw binary data as varying voltage levels.",
+    "approach": "1. **Initial triage:** Analyzed the WAV file properties\n   - Format: 16-bit PCM mono\n   - Sample rate: 2736 Hz (unusual)\n   - Duration: 1 second\n\n2. **Spectrogram analysis:** Generated a spectrogram which showed broadband red noise (consistent high energy) rather than tonal patterns, ruling out simple modem/DTMF approaches.\n\n3. **Amplitude quantization:** Examined raw audio samples and discovered 16 distinct amplitude clusters:\n   - Amplitudes ranged from ~1000 to ~8500\n   - Exactly 16 clusters ",
+    "tools": [
+      "sox` \u2014 audio analysis and spectrogram generation",
+      "wave` (Python stdlib) \u2014 WAV file reading",
+      "numpy` \u2014 audio amplitude quantization and normalization",
+      "minimodem` \u2014 initial modem decoding attempts (unsuccessful but useful for ruling out modulation approaches)"
+    ],
+    "missing_tools": [],
+    "points": 150,
+    "solved": true,
+    "flag": "picoCTF{mU21C_1s_1337_5db6b85e}",
+    "timestamp": "2026-03-24T15:12:28.094010"
+  },
+  {
+    "challenge": "Forensics Git 0",
+    "slug": "forensics-git-0",
+    "pattern": "Extract a flag hidden in a git repository within a compressed disk image.",
+    "key_insight": "- **debugfs is powerful:** No mounting required, no loop device permission issues, works read-only on the raw disk\n- **Git metadata persists:** COMMIT_EDITMSG files are often overlooked but contain valuable information\n- **Leetspeak hint:** The note.txt file explicitly stated the flag would contain ",
+    "approach": "**Why this worked:** The challenge name \"Forensics Git 0\" directly indicates a git-based forensics challenge. Rather than reverse-engineering code or analyzing binary protocols, the solution focused on filesystem archaeology and git metadata recovery.\n\n**Process:**\n1. Decompressed `disk.img.gz` to get the raw disk image (1GB)\n2. Used `fdisk` to identify three partitions: two Linux ext4 filesystems and a swap partition\n3. Extracted partition 3 (the main filesystem) using `dd` with appropriate sec",
+    "tools": [
+      "gunzip` - decompress the disk image",
+      "fdisk` - analyze partition table",
+      "dd` - extract individual partitions",
+      "debugfs` - navigate ext4 filesystem without mounting",
+      "grep` - filter output"
+    ],
+    "missing_tools": [
+      "None - all required tools were available in the standard environment."
+    ],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{g17_1n_7h3_d15k_041217d8}",
+    "timestamp": "2026-03-24T15:12:43.313155"
+  },
+  {
+    "challenge": "extensions (150pts, Forensics)",
+    "slug": "extensions",
+    "pattern": "A \"weird text file\" that's actually a PNG image with the wrong file extension. Extract the embedded text using OCR.",
+    "key_insight": "The challenge is a play on file extensions\n   - The filename suggests it's text, but the content is image data\n   - The flag is rendered as visible text within the PNG image itself\n\n3. **Extraction:** Use OCR (Tesseract) to extract the text from the image\n   - `tesseract flag.txt -` outputs the embe",
+    "approach": "1. **Triage:** Check the file type using `file` command\n   - Despite being named `flag.txt`, the file is actually a PNG image (magic bytes: `PNG`)\n\n2. **Key Insight:** The challenge is a play on file extensions\n   - The filename suggests it's text, but the content is image data\n   - The flag is rendered as visible text within the PNG image itself\n\n3. **Extraction:** Use OCR (Tesseract) to extract the text from the image\n   - `tesseract flag.txt -` outputs the embedded text",
+    "tools": [
+      "file` \u2014 identify file type",
+      "tesseract` \u2014 optical character recognition (OCR) to extract text from image"
+    ],
+    "missing_tools": [],
+    "points": 150,
+    "solved": true,
+    "flag": "picoCTF{now_you_know_about_extensions}",
+    "timestamp": "2026-03-24T15:12:12.268939"
+  },
+  {
+    "challenge": "Disk, disk, sleuth! II",
+    "slug": "disk-disk-sleuth-ii",
+    "pattern": "",
+    "key_insight": "The filename \"down-at-the-bottom.txt\" is a hint that the file is stored physically at the bottom of the disk, but the challenge is more about filesystem forensics than raw data recovery. The file is intact and readable through normal ext filesystem parsing.",
+    "approach": "1. **Extract the disk image:** The challenge file is gzip-compressed. Extract it using `gunzip`.\n\n2. **Identify the filesystem:** Use `fdisk` or `file` to determine the partition layout. The image contains an MBR with a Linux ext filesystem partition starting at sector 2048.\n\n3. **Parse the ext filesystem:** Read the superblock, group descriptor table, and inode tables using direct file I/O. The filesystem uses 1024-byte blocks with 128-byte inodes.\n\n4. **Locate the target file:**\n   - Find inod",
+    "tools": [
+      "gunzip` - Extract gzip-compressed disk image",
+      "fdisk` - Identify partition layout",
+      "Python 3 with `struct` module - Parse filesystem structures and read inode data",
+      "re` (regular expressions) - Extract flag from ASCII art"
+    ],
+    "missing_tools": [
+      "None - all required tools are available in the environment."
+    ],
+    "points": 130,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-03-24T15:14:02.102205"
+  },
+  {
+    "challenge": "Wireshark twoo twooo two twoo (100pts, Forensics)",
+    "slug": "wireshark-twoo-twooo-two-twoo",
+    "pattern": "DNS exfiltration hidden behind two layers of red herrings in a PCAP.",
+    "key_insight": "The HTTP flags AND the domain name are both red herrings. The real data is in the DNS query subdomains themselves \u2014 base64-encoded chunks where only a few produce readable ASCII. Filtering for alphanumeric-only decoded output isolates the flag pieces.",
+    "approach": "1. `strings` finds 89 `picoCTF{sha256hash}` flags in HTTP responses \u2014 all decoys\n2. DNS queries all go to `reddshrimpandherring.com` (\"red shrimp and herring\" = red herring)\n3. Each DNS subdomain is an 8-character base64 chunk\n4. Most decode to random binary; a handful decode to alphanumeric/flag characters\n5. Concatenating the flag-like chunks spells the real flag",
+    "tools": [
+      "tshark` \u2014 DNS query extraction",
+      "python3` + `base64` \u2014 decoding and filtering"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{sha256hash}",
+    "timestamp": "2026-03-24T15:19:27.312723"
+  },
+  {
+    "challenge": "advanced",
+    "slug": "advanced-potion-making",
+    "pattern": "Recover a corrupted PNG file and extract steganographic data hidden in the red channel.",
+    "key_insight": "The challenge uses steganography - the flag is hidden in the red channel of the PNG image at plane 0. The bitmap font text visible in the image is not the actual flag; the real flag is encoded in the pixel values themselves and requires specific plane extraction to reveal.",
+    "approach": "1. **Identify File Type**: The corrupted file is a PNG with damaged magic bytes\n2. **Fix Header**: Repair the PNG signature and IHDR chunk length\n   - Bytes 2-3: `42 11` \u2192 `4E 47` (fixes PNG header)\n   - Bytes 8-11: `00 12 13 14` \u2192 `00 00 00 0D` (fixes IHDR chunk length)\n3. **Extract Steganographic Data**: Use Stegsolve or direct analysis of the Red plane 0 to reveal the flag",
+    "tools": [
+      "Hexdump/binary analysis to identify corruption",
+      "PNG format validation",
+      "Stegsolve (or similar steganalysis tool) to extract red plane 0"
+    ],
+    "missing_tools": [
+      "None - all required tools are available in the standard environment."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{w1z4rdry}",
+    "timestamp": "2026-03-24T15:20:46.946512"
+  },
+  {
+    "challenge": "Bitlocker",
+    "slug": "bitlocker-1",
+    "pattern": "",
+    "key_insight": "",
+    "approach": "BitLocker-encrypted disk image with a weak user password.\n\n1. **Extract hash** \u2014 `bitlocker2john -i bitlocker-1.dd` extracts the user password hash (`$bitlocker$0$...`)\n2. **Crack with GPU** \u2014 `hashcat -m 22100 hash.txt wordlist` cracks it in 11 seconds on RTX 5080\n   - Password: `jacqueline`\n3. **Decrypt** \u2014 `dislocker-file -V bitlocker-1.dd -ujacqueline -- decrypted.ntfs`\n4. **Extract flag** \u2014 `7z e decrypted.ntfs flag.txt`",
+    "tools": [],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{us3_b3tt3r_p4ssw0rd5_pl5!_3242adb1}",
+    "timestamp": "2026-02-28T02:41:04.217788",
+    "cost_usd": 0.1055539,
+    "num_turns": 11,
+    "duration_ms": 42188,
+    "model": "haiku"
+  },
+  {
+    "challenge": "DISKO 4",
+    "slug": "disko-4",
+    "pattern": "Recover a deleted file from a FAT32 disk image.",
+    "key_insight": "The challenge name \"This time I deleted the file!\" was a direct hint to use file recovery tools. The `fls` tool from sleuthkit marks deleted files with `*` and shows their inode numbers, allowing recovery via `icat` even after deletion. The filename `dont-delete.gz` was a tongue-in-cheek hint to the",
+    "approach": "1. Decompressed the `disko-4.dd.gz` disk image (100MB)\n2. Identified the filesystem type as FAT32 using `file` and `fdisk`\n3. Used `fls` (sleuthkit) to list all files including deleted ones\n4. Found a deleted file `dont-delete.gz` (inode 532021)\n5. Extracted the inode content using `icat`\n6. Decompressed the gzip file to reveal the flag",
+    "tools": [
+      "gunzip` \u2014 decompress the disk image",
+      "file`, `fdisk` \u2014 identify disk type",
+      "fls` (sleuthkit) \u2014 list files including deleted",
+      "icat` (sleuthkit) \u2014 extract file contents by inode",
+      "grep` \u2014 extract flag from recovered file"
+    ],
+    "missing_tools": [
+      "None \u2014 all required tools were available in the environment."
+    ],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-03-24T17:28:34.128499",
+    "cost_usd": 0.14539349999999998,
+    "num_turns": 19,
+    "duration_ms": 49116,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Sleuthkit Apprentice",
+    "slug": "sleuthkit-apprentice",
+    "pattern": "Extract a hidden flag from a Linux disk image using the Sleuthkit forensic analysis tools.",
+    "key_insight": "The challenge teaches sleuthkit navigation:\n1. Partition identification and offset calculation (sector * 512 bytes)\n2. Inode-based file system navigation using `fls`\n3. Direct inode content extraction using `icat`\n4. The flag file used Unicode/spacing encoding, requiring post-processing",
+    "approach": "### Step 1: Identify the Disk Image\n- File type: DOS/MBR partition table with 3 partitions\n  - Partition 1 (sector 2048): Linux boot partition (ext2/ext3)\n  - Partition 2 (sector 206848): Linux swap\n  - Partition 3 (sector 360448): Linux root filesystem (ext2/ext3)\n\n### Step 2: Navigate the Root Filesystem\nUsing sleuthkit's `fls` command with partition offset 360448:\n- Listed root directory contents\n- Found `/root` directory (inode 1995) contained user data\n- Discovered `my_folder` subdirectory ",
+    "tools": [
+      "file` - Identify disk image type and partition layout",
+      "fls` - List files in filesystem by inode",
+      "icat` - Extract file content from specific inode",
+      "strings` - String search in disk image (initial reconnaissance)",
+      "srch_strings` - Search in unallocated space and metadata"
+    ],
+    "missing_tools": [],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{by73_5urf3r_3497ae6b}",
+    "timestamp": "2026-03-24T17:29:00.814095",
+    "cost_usd": 0.1584881,
+    "num_turns": 24,
+    "duration_ms": 75579,
+    "model": "haiku"
+  },
+  {
+    "challenge": "MSB (200pts, Forensics)",
+    "slug": "msb",
+    "pattern": "",
+    "key_insight": "When LSB analysis fails to find a flag despite visual artifacts being present, try extracting the MSBs instead. MSB steganography is less common but more visible in the image's visual appearance.",
+    "approach": "The challenge name \"MSB\" is the direct hint. While LSB steganography stores data in the least significant bit of each color channel (which is harder to detect), this challenge hides data in the **most significant bits** instead.\n\nThe image is a Ukiyoe artwork (\"Ninja and Prince Genji\") that was being analyzed as a standard LSB stego challenge, but the actual data is in the MSBs.\n\n**Key Insight:** When LSB analysis fails to find a flag despite visual artifacts being present, try extracting the MS",
+    "tools": [
+      "Python 3 with PIL/Pillow",
+      "Standard bitwise operations (`>>`, `&`)"
+    ],
+    "missing_tools": [
+      "None \u2014 all tools were available in the flake environment."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-03-24T17:29:04.992737",
+    "cost_usd": 0.14132689999999998,
+    "num_turns": 16,
+    "duration_ms": 79870,
+    "model": "haiku"
+  },
+  {
+    "challenge": "FindAndOpen",
+    "slug": "findandopen",
+    "pattern": "",
+    "key_insight": "- **Steganography in network traffic**: The challenge hides the password using multiple layers of encoding:\n  - Data embedded in Ethernet frame payloads (hex-encoded)\n  - Password further encoded in base64 within the decoded text\n- **Message hints**: The packet payloads contain hints like \"split the",
+    "approach": "The challenge required analyzing a PCAP file to extract the password needed to decrypt a password-protected ZIP archive. The solution involved:\n\n1. **PCAP Analysis**: Used `tshark` to extract packet data fields\n2. **Payload Extraction**: Extracted the hex-encoded data payloads from Ethernet frames\n3. **Hex Decoding**: Converted hex payloads to ASCII text\n4. **Base64 Extraction**: Found a base64-encoded string hiding in the decoded text\n5. **Password Recovery**: Decoded the base64 string to revea",
+    "tools": [
+      "tshark`: Network packet analysis and extraction",
+      "unzip`: ZIP extraction with password",
+      "Python 3: Hex/base64 decoding and automation"
+    ],
+    "missing_tools": [
+      "None - all required tools were available in the environment."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{R34DING_LOKd_fil56_succ3ss_0f2afb1a}",
+    "timestamp": "2026-03-24T17:29:05.308755",
+    "cost_usd": 0.2287037,
+    "num_turns": 24,
+    "duration_ms": 83277,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Milkslap (200pts, Forensics)",
+    "slug": "milkslap",
+    "pattern": "Extract a hidden flag from a PNG image using steganography analysis. The challenge uses LSB (Least Significant Bit) steganography in the blue channel to hide the flag within an extremely large image.",
+    "key_insight": "The challenge name \"Milkslap\" combined with the milk emoji is a thematic hint, but the real trick is recognizing that:\n- **Forensics category** \u2192 look for hidden data analysis\n- **No obvious files** \u2192 check the webpage/CSS for embedded resources\n- **Large image file** \u2192 likely contains steganographi",
+    "approach": "The challenge description is just a milk emoji \ud83e\udd5b with no hint in the description itself. The solution requires:\n\n1. **Access the challenge webpage** \u2014 Navigate to `http://mercury.picoctf.net:58537/` which displays an animated GIF of milk being spilled\n2. **Discover the hidden image** \u2014 Inspect the webpage source (CSS) to find a reference to `concat_v.png`\n3. **Download the image** \u2014 Extract the PNG file from the server (warning: 1280\u00d747520 pixels, very tall)\n4. **Apply steganography detection** ",
+    "tools": [
+      "curl (to download the image from the challenge server)",
+      "zsteg (automatic LSB steganography detection and extraction)"
+    ],
+    "missing_tools": [
+      "None \u2014 zsteg and curl are both available in the environment."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{imag3_m4n1pul4t10n_sl4p5}",
+    "timestamp": "2026-03-24T17:29:19.453602",
+    "cost_usd": 0.2951263,
+    "num_turns": 19,
+    "duration_ms": 96523,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Event",
+    "slug": "event-viewing",
+    "pattern": "A Windows forensics challenge where an infected employee's Event Logs reveal three distinct pieces of malware activity: software installation, execution, and system shutdown. Each event contains a bas",
+    "key_insight": "Windows Event Logs (EVTX files) are structured binary records containing XML event data. By parsing all 8619+ records and searching for base64-encoded strings that decode to printable ASCII, we can extract the hidden flag fragments. The challenge name \"Event-Viewing\" is a hint \u2014 proper event log ana",
+    "approach": "Windows EVTX log analysis. The flag is split into 3 base64-encoded pieces hidden across events matching the narrative:\n\n1. **Software installation** \u2014 Event ID 75 (MsiInstaller)\n   - Encoded in Event data: `cGljb0NURntFdjNudF92aTN3djNyXw==`\n   - Decodes to: `picoCTF{Ev3nt_vi3wv3r_`\n\n2. **Running the malware** \u2014 Event ID 186 (Security Auditing / Registry Modification)\n   - Encoded in Event data: `MXNfYV9wcjN0dHlfdXMzZnVsXw==`\n   - Decodes to: `1s_a_pr3tty_us3ful_`\n\n3. **Shutdown on login** \u2014 Even",
+    "tools": [
+      "python-evtx` \u2014 Python library for parsing Windows Event Log files",
+      "Base64 decoding",
+      "Regular expressions for pattern matching"
+    ],
+    "missing_tools": [],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{Ev3nt_vi3wv3r_1s_a_pr3tty_us3ful_t00l_81ba3fe9}",
+    "timestamp": "2026-03-24T17:29:45.609774",
+    "cost_usd": 0.15954560000000004,
+    "num_turns": 15,
+    "duration_ms": 125028,
+    "model": "haiku"
+  },
+  {
+    "challenge": "WPA",
+    "slug": "wpa-ing-out",
+    "pattern": "",
+    "key_insight": "- **WPA cracking requires a complete handshake:** The PCAP contained all 4 EAPOL frames needed for the attack\n- **Dictionary attacks are practical:** With rockyou.txt (14M+ common passwords), dictionary-based cracking succeeds for weak passwords\n- **BSSID is essential:** aircrack-ng needs the exact ",
+    "approach": "1. **Identify the network:** Used `tshark` to extract the SSID and BSSID from the PCAP\n   - SSID: Gone_Surfing (hex: 476f6e655f53757266696e67)\n   - BSSID: 00:5f:67:4f:6a:1a\n\n2. **Extract the WPA handshake:** The PCAP contained a complete EAPOL 4-way handshake, which aircrack-ng could process directly\n\n3. **Crack the password:** Used `aircrack-ng` with the rockyou.txt wordlist\n   - Command: `aircrack-ng -w rockyou.txt -b 00:5f:67:4f:6a:1a wpa-ing_out.pcap`\n   - Result: Password found as `mickeymo",
+    "tools": [
+      "tshark` \u2014 PCAP analysis and field extraction",
+      "aircrack-ng` \u2014 WPA dictionary attack",
+      "rockyou.txt` \u2014 Common password wordlist (14M+ entries)",
+      "xxd` \u2014 Hex decoding for SSID"
+    ],
+    "missing_tools": [
+      "None \u2014 all required tools were available in the environment."
+    ],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{mickeymouse}",
+    "timestamp": "2026-03-24T17:32:43.292265",
+    "cost_usd": 0.14231994999999997,
+    "num_turns": 18,
+    "duration_ms": 297392,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Mob Psycho",
+    "slug": "mob-psycho",
+    "pattern": "Extract a hex-encoded flag from an Android APK's resource files.",
+    "key_insight": "APKs are ZIP files. The flag was hidden in an unusual resource path (`res/color/flag.txt`) as hex-encoded ASCII.",
+    "approach": "1. Downloaded the APK \u2014 it's a ZIP archive\n2. Extracted `res/color/flag.txt` containing a hex string\n3. Decoded hex to ASCII to get the flag",
+    "tools": [
+      "curl, unzip, xxd"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{ax8mC0RU6ve_NX85l4ax8mCl_5e67ea5e}",
+    "timestamp": "2026-03-24T17:43:38.556365",
+    "cost_usd": 0.33653,
+    "num_turns": 14,
+    "duration_ms": 44782,
+    "model": "opus"
+  },
+  {
+    "challenge": "scrambled",
+    "slug": "scrambled-bytes",
+    "pattern": "Recover a PNG image from a pcap where each byte was shuffled and XOR'd using Python's `random` module seeded with `int(time())`.",
+    "key_insight": "`random.seed(int(time()))` gives a predictable seed \u2014 the Unix timestamp is right there in the pcap. The source ports serve as a verification oracle since they're also generated by the same random state.",
+    "approach": "1. Read `send.py` to understand the scrambling: seed with timestamp, shuffle bytes, send each byte XOR'd with a random value over UDP (one byte per packet, random source port).\n2. Extracted 1992 UDP packets from the pcap targeting port 56742.\n3. Used the first packet's timestamp (~1614044650) to brute-force the seed. Validated by checking that `random.randrange(65536)` matched actual source ports.\n4. Seed 1614044650 matched all 1992 source ports perfectly.\n5. Replayed the random sequence to undo",
+    "tools": [
+      "scapy (pcap parsing)",
+      "Python random (replay PRNG)"
+    ],
+    "missing_tools": [],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{n0_t1m3_t0_w4st3_5huffl1n9_ar0und}",
+    "timestamp": "2026-03-24T17:46:02.161379",
+    "cost_usd": 0.6418350000000003,
+    "num_turns": 24,
+    "duration_ms": 149612,
+    "model": ""
+  },
+  {
+    "challenge": "Bitlocker",
+    "slug": "bitlocker-2",
+    "pattern": "",
+    "key_insight": "",
+    "approach": "BitLocker-encrypted disk image + RAM dump captured while the drive was mounted.\n\nSince the drive was unlocked when the memory dump was taken, the decrypted file contents (including flag.txt) were cached in physical memory. Direct string search for `picoCTF{` in the 2GB memory dump found the flag at 3 locations.\n\n```python\nwith open(\"memdump.mem\", \"rb\") as f:\n    data = f.read()\npos = data.find(b\"picoCTF{\")\nend = data.find(b\"}\", pos)\nprint(data[pos:end+1].decode())\n```",
+    "tools": [],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{B1tl0ck3r_dr1v3_d3crypt3d_9029ae5b}",
+    "timestamp": "2026-02-28T02:51:26.384700",
+    "cost_usd": 0.06070034999999999,
+    "num_turns": 8,
+    "duration_ms": 32935,
+    "model": "haiku"
+  },
+  {
+    "challenge": "WhitePages (250pts, Forensics)",
+    "slug": "whitepages",
+    "pattern": "",
+    "key_insight": "The challenge name \"WhitePages\" is a double pun:\n- Reference to the actual WhitePages service (people directory)\n- Literal \"white pages\" of whitespace characters hiding data\n\nThe decoded text itself contains: `SEE PUBLIC RECORDS & BACKGROUND REPORT / 5000 Forbes Ave, Pittsburgh, PA 15213` \u2014 thematic",
+    "approach": "1. **Triage**: Ran `xxd` on the file and noticed patterns of `e2 80 83` (UTF-8 em-space U+2003) interspersed with regular spaces `20`\n2. **Hypothesis**: Recognized classic whitespace steganography \u2014 two distinct whitespace characters encode bits\n3. **Decode**:\n   - Mapped regular space \u2192 1 bit\n   - Mapped em-space (U+2003) \u2192 0 bit\n   - Converted resulting binary string to ASCII in 8-bit chunks\n4. **Success**: Decoded plaintext revealed a Pittsburgh address (WhitePages reference) and the flag",
+    "tools": [
+      "xxd` \u2014 hex dump to identify byte patterns",
+      "Python 3 \u2014 custom whitespace steganography decoder"
+    ],
+    "missing_tools": [
+      "None \u2014 used only standard Python 3 and shell utilities."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{not_all_spaces_are_created_equal_f5d46aff52c6e17f9fd6317b33d2d783}",
+    "timestamp": "2026-03-24T17:54:48.208871",
+    "cost_usd": 0.0865557,
+    "num_turns": 13,
+    "duration_ms": 44769,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Forensics Git 1",
+    "slug": "forensics-git-1",
+    "pattern": "",
+    "key_insight": "",
+    "approach": "### Why This Approach Worked\nPart 1 of the Forensics Git series builds directly on Part 0's techniques but adds a twist: the flag file was **added in one commit and then deleted in the next**. Rather than finding it in the current filesystem state, we had to recover it from git history.\n\nThe key insight: Git never truly deletes objects from `.git/objects/` until garbage collection. All historical commits and their associated blobs remain accessible.\n\n### Solution Steps\n\n1. **Decompress the disk ",
+    "tools": [],
+    "missing_tools": [],
+    "points": 300,
+    "solved": true,
+    "flag": "picoCTF{g17_r3m3mb3r5_d4ddf904}",
+    "timestamp": "2026-03-24T17:56:17.746898",
+    "cost_usd": 0.26396635,
+    "num_turns": 40,
+    "duration_ms": 127414,
+    "model": "haiku"
+  },
+  {
+    "challenge": "like1000 (250pts, Forensics)",
+    "slug": "like1000",
+    "pattern": "A heavily nested tar archive (1000.tar containing 999.tar, containing 998.tar, ... containing 1.tar) with a PNG image at the core containing the flag as visible text.",
+    "key_insight": "The flag is hidden as visible text in a PNG image, not embedded via steganography. The real trick is extracting through 1000 layers of tar files, which requires automation rather than manual extraction. OCR works but can introduce transcription errors due to digit/letter confusion.",
+    "approach": "",
+    "tools": [
+      "tar` - Extract tar archives",
+      "tesseract` (optional) - OCR to read image text",
+      "ImageMagick `convert` (optional) - Image enhancement for better OCR"
+    ],
+    "missing_tools": [
+      "None required. All standard utilities available."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{l0t5_0f_TAR5}",
+    "timestamp": "2026-03-24T17:57:39.333130",
+    "cost_usd": 0.36602534999999997,
+    "num_turns": 46,
+    "duration_ms": 209416,
+    "model": "haiku"
+  },
+  {
+    "challenge": "c0rrupt",
+    "slug": "c0rrupt",
+    "pattern": "",
+    "key_insight": "The corruption wasn't random\u2014it consisted of exactly three, specific, deliberate modifications:\n\n1. **PNG Signature Corruption** (offset 0x00):\n   - Original: `89 65 4e 34 0d 0a b0 aa`\n   - Fixed: `89 50 4e 47 0d 0a 1a 0a`\n   - This is the standard PNG file signature\n\n2. **pHYs Chunk Corruption** (o",
+    "approach": "1. **File Type Identification**: Used `file` and `xxd` to examine the file header and identify it as a corrupted PNG\n2. **Structure Analysis**: Analyzed the PNG signature and chunk structure to identify corruption patterns\n3. **Byte-Level Fixes**: Applied three specific hex corrections to restore the PNG to a valid state\n4. **Flag Extraction**: Once the PNG was fixed, the flag became readable",
+    "tools": [
+      "xxd` \u2014 hex dump analysis",
+      "file` \u2014 file type identification",
+      "Python 3 \u2014 byte-level file manipulation",
+      "ImageMagick `identify` \u2014 PNG validation (helped confirm structure)"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{c0rrupt10n_1847995}",
+    "timestamp": "2026-03-24T17:58:44.450933",
+    "cost_usd": 0.5931770000000002,
+    "num_turns": 54,
+    "duration_ms": 287278,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Timeline 1",
+    "slug": "timeline-1",
+    "pattern": "Find a hidden flag in an ext4 disk image by analyzing filesystem timestamps and discovering a file that post-dates the superblock's last-write time.",
+    "key_insight": "**Timeline 1 increases difficulty by using post-dated inodes.** While Timeline 0 looked for files with ancient timestamps (1985), Timeline 1 hides a file that appears to have been *created after* the filesystem was closed.\n\nThe file `/etc/chat` is not a standard Alpine Linux file (normally a PPP cha",
+    "approach": "1. **Decompressed** the disk image: `gunzip partition4.img.gz`\n2. **Generated filesystem timeline** using sleuthkit:\n   - `fls -m -r partition4.img` to extract inode metadata in mactime format\n   - `mactime -b` to build a sorted MAC (Modified/Accessed/Changed) timeline\n3. **Identified timestamp anomaly**: The file `/etc/chat` (inode 32716) was created at `2025-12-01 15:50:07`, which is **7 minutes after** the filesystem's superblock recorded last-write time of `2025-12-01 15:42:39`\n4. **Extracte",
+    "tools": [
+      "sleuthkit** (`fls`, `icat`, `istat`) \u2014 filesystem analysis via `nix-shell -p sleuthkit",
+      "e2fsprogs** (`debugfs`) \u2014 ext4 inspection via `nix-shell -p e2fsprogs",
+      "base64** (coreutils) \u2014 decoding",
+      "Python 3** \u2014 scripting"
+    ],
+    "missing_tools": [
+      "sleuthkit` \u2014 not in flake, used via `nix-shell -p sleuthkit",
+      "e2fsprogs` \u2014 not in flake, used via `nix-shell -p e2fsprogs"
+    ],
+    "points": 300,
+    "solved": true,
+    "flag": "picoCTF{573417h13r_7h4n_7h3_1457_58527bb222}",
+    "timestamp": "2026-03-24T18:02:58.491129",
+    "cost_usd": 0.9951511000000001,
+    "num_turns": 63,
+    "duration_ms": 528873,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Rogue Tower",
+    "slug": "rogue-tower",
+    "pattern": "",
+    "key_insight": "The XOR encryption key is derived from the compromised device's IMSI, found in the HTTP registration User-Agent header and DNS query. The \"non-HTTP traffic\" hint points to the carrier broadcasts and DNS queries that establish the IMSI-to-device mapping.",
+    "approach": "1. **Identified rogue tower**: UDP broadcast on port 55000 from 192.168.99.1 advertising \"UNAUTHORIZED-TEST-NETWORK\" with PLMN=00101, CELLID=92058 (vs legitimate towers at 192.168.1.1 with CELLID=15606/15607).\n\n2. **Found compromised device**: Device at 10.100.50.122 (IMSI: 310410308555787) registered with CELL:92058 \u2014 the rogue tower's cell ID. It then exfiltrated data to 198.51.100.58:443.\n\n3. **Extracted exfiltration**: 6 POST requests carrying base64 chunks that concatenate to `QFFWWnZjfkxCC",
+    "tools": [
+      "tshark, xxd (triage)",
+      "Python 3 + scapy (solve script)"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{` revealed the key is `08555787` \u2014 the last 8 digits of the compromised device's IMSI (310410308555787), repeating cyclically.\n\n## Key Insight\n\nThe XOR encryption key is derived from the compromised device's IMSI, found in the HTTP registration User-Agent header and DNS query. The \"non-HTTP traffic\" hint points to the carrier broadcasts and DNS queries that establish the IMSI-to-device mapping.\n\n## Tools Used\n\n- tshark, xxd (triage)\n- Python 3 + scapy (solve script)\n\n## Flag\n\n`picoCTF{r0gu3_c3ll_t0w3r_dbc40831}",
+    "timestamp": "2026-03-24T18:07:14.753445",
+    "cost_usd": 0.6779419999999999,
+    "num_turns": 18,
+    "duration_ms": 179188,
+    "model": "opus"
+  },
+  {
+    "challenge": "Pitter, Patter, Platters",
+    "slug": "pitter-patter-platters",
+    "pattern": "Flag hidden in slack space of an ext3 disk image, null-byte interleaved and reversed.",
+    "key_insight": "Slack space \u2014 the unused portion of a filesystem block after a file's content ends \u2014 can contain hidden data that normal filesystem tools won't show. Here the data was additionally obfuscated by null-byte interleaving and string reversal.",
+    "approach": "1. Identified disk image as ext3 filesystem with `file`\n2. Used `debugfs` to list files \u2014 found `suspicious-file.txt` (55 bytes, inode 12, block 2049)\n3. File content: \"Nothing to see here! But you may want to look here -->\" pointing to slack space\n4. Extracted bytes from block 2049 offset 55 (after file content to end of block)\n5. Slack space contained the flag with null bytes between each character, in reverse order\n6. Removed null bytes, reversed the string",
+    "tools": [
+      "debugfs` \u2014 ext filesystem inspection without mounting",
+      "Python 3 \u2014 binary extraction and decoding"
+    ],
+    "missing_tools": [
+      "None \u2014 all tools were available in the environment."
+    ],
+    "points": 250,
+    "solved": true,
+    "flag": "picoCTF{b3_5t111_mL|_<3_f2136893}",
+    "timestamp": "2026-03-24T18:07:38.084671",
+    "cost_usd": 0.4011890000000001,
+    "num_turns": 19,
+    "duration_ms": 89424,
+    "model": ""
+  },
+  {
+    "challenge": "m00nwalk (250pts, Forensics)",
+    "slug": "m00nwalk",
+    "pattern": "WAV file containing an SSTV (Slow-Scan Television) encoded image with the flag.",
+    "key_insight": "\"Moon walk\" = Apollo = SSTV. The audio is not speech or modem data \u2014 it's a slow-scan television transmission.",
+    "approach": "The challenge name \"m00nwalk\" references the Apollo moon missions, which used SSTV to transmit images. The WAV file (48kHz, 16-bit mono, ~115s) contains a Scottie 1 mode SSTV signal.\n\nDecoded using [colaclanth/sstv](https://github.com/colaclanth/sstv) Python decoder, which auto-detected the mode and produced a PNG image containing the flag text.",
+    "tools": [
+      "colaclanth/sstv (Python SSTV decoder from GitHub)",
+      "Pillow, soundfile, scipy (dependencies)"
+    ],
+    "missing_tools": [
+      "sstv` \u2014 not in nix or pip by default; cloned from GitHub and installed manually"
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{beep_boop_im_in_space}",
+    "timestamp": "2026-03-24T18:08:10.313039",
+    "cost_usd": 0.6969325000000001,
+    "num_turns": 31,
+    "duration_ms": 189851,
+    "model": "opus"
+  },
+  {
+    "challenge": "shark on wire 1",
+    "slug": "shark-on-wire-1",
+    "pattern": "A forensics challenge where the flag is hidden in a packet capture file (PCAP). The flag is steganographically encoded in UDP packet payloads.",
+    "key_insight": "This challenge demonstrates **payload-based steganography** in network traffic. The flag is encoded one byte (character) per UDP packet, with each packet containing the hex representation of an ASCII character.",
+    "approach": "1. **Triage the PCAP:** Started by examining the packet capture to identify what data is present.\n   - Used `tshark` to list all packets and protocols\n   - Found multiple conversations: TCP SYN packets, UDP traffic between various IPs\n\n2. **Identify the encoding:** The flag wasn't visible as plaintext or standard HTTP/DNS payloads.\n   - Noticed UDP packets from 10.0.0.2 with small payload sizes (9 bytes)\n   - The UDP length field indicated only 1 byte of actual data per packet\n\n3. **Extract and ",
+    "tools": [
+      "tshark` - Packet analysis and extraction",
+      "Python 3 - Data processing and decoding"
+    ],
+    "missing_tools": [],
+    "points": 2019,
+    "solved": true,
+    "flag": "picoCTF{N0t_{StaTa_fLa31355g}",
+    "timestamp": "2026-03-24T15:15:25.416537",
+    "cost_usd": 0.0221379,
+    "num_turns": 3,
+    "duration_ms": 8155,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Eavesdrop (300pts, Forensics)",
+    "slug": "eavesdrop",
+    "pattern": "Extract a des3-encrypted file from a PCAP and decrypt it using credentials leaked in the conversation.",
+    "key_insight": "The challenge demonstrates why you should never discuss encryption passphrases over unencrypted channels. The entire solution is found by:\n1. Reading the plaintext conversation that carelessly mentions the openssl command\n2. Extracting the file from the subsequent transfer stream\n3. Applying the dis",
+    "approach": "1. **Analyze PCAP with tshark** \u2014 Identified TCP conversations in the capture file\n2. **Follow TCP streams** \u2014 Found a plaintext conversation (stream 0) revealing:\n   - An openssl des3 command with a password: `supersecretpassword123`\n   - A file transfer happening over port 9002\n3. **Extract encrypted file** \u2014 Located the encrypted file data in TCP stream 2 (the 9002 transfer)\n4. **Decrypt** \u2014 Used openssl des3 with the leaked password to decrypt",
+    "tools": [
+      "tshark` \u2014 PCAP analysis and TCP stream extraction",
+      "openssl` \u2014 DES3 decryption"
+    ],
+    "missing_tools": [
+      "None \u2014 all tools were available in the environment."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{nc_73115_411_0ee7267a}",
+    "timestamp": "2026-03-24T18:13:09.211389",
+    "cost_usd": 0.11407755000000001,
+    "num_turns": 15,
+    "duration_ms": 43428,
+    "model": "haiku"
+  },
+  {
+    "challenge": "St3g0",
+    "slug": "st3g0",
+    "pattern": "Extract a hidden flag from a PNG image using LSB (Least Significant Bit) steganography.",
+    "key_insight": "The flag is encoded in the RGB LSB layer (`b1,rgb,lsb,xy`), which means:\n- Bit plane 1 (LSB)\n- RGB channels (not individual R/G/B)\n- Linear XY scan order (top-left to bottom-right)\n\nThis is one of the most common LSB steganography techniques for CTF challenges.",
+    "approach": "The challenge provides a PNG image (`pico.flag.png`) and asks you to find a hidden flag. This is classic **LSB steganography** where data is hidden in the least significant bits of pixel color channels.\n\n1. **Recognize the pattern:** PNG + \"find the flag\" \u2192 steganography challenge\n2. **Extract LSB data:** Each byte of an image's pixel color (RGB channels) contains 1 bit of hidden data in its LSB\n3. **Reconstruct the message:** Reading LSB from all RGB channels in sequence reveals the flag",
+    "tools": [
+      "zsteg` \u2014 specialized PNG steganography extractor that tests all LSB layer combinations and displays readable text"
+    ],
+    "missing_tools": [
+      "None \u2014 `zsteg` is available in the environment."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{7h3r3_15_n0_5p00n_96ae0ac1}",
+    "timestamp": "2026-03-24T18:13:19.804177",
+    "cost_usd": 0.12146825,
+    "num_turns": 18,
+    "duration_ms": 50424,
+    "model": "haiku"
+  },
+  {
+    "challenge": "endianness",
+    "slug": "endianness-v2",
+    "pattern": "A JPEG file recovered from a 32-bit system has its bytes organized in reversed 32-bit chunks due to endianness issues. Fix the byte order to recover the original image and read the flag.",
+    "key_insight": "",
+    "approach": "### Root Cause\nThe file is a JPEG with every 4-byte (32-bit) chunk reversed due to big/little endian byte ordering.\n\n**Corrupted header:** `E0 FF D8 FF` (little-endian JPEG signature)\n**Expected header:** `FF D8 FF E0` (big-endian / standard JPEG signature)\n\n### Solution Steps\n1. Read the corrupted file binary\n2. Process in 4-byte chunks and reverse each chunk's byte order\n3. Write corrected data to a new JPG file\n4. Display the image to read the flag visually\n\n### Tool Options\n- **CyberChef:** ",
+    "tools": [
+      "xxd` \u2014 hex inspection and conversion",
+      "PIL/Pillow` \u2014 image manipulation and display",
+      "file` \u2014 file type identification"
+    ],
+    "missing_tools": [
+      "None. Standard forensics toolkit covers all requirements."
+    ],
+    "points": 300,
+    "solved": false,
+    "flag": "picoCTF{cert!f1Ed_iNd!4n_s0rrY_3nDian_XXXXXXXX}",
+    "timestamp": "2026-03-24T18:17:22.065995",
+    "cost_usd": 0.9311351,
+    "num_turns": 65,
+    "duration_ms": 299764,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Invisible WORDs",
+    "slug": "invisible-words",
+    "pattern": "Extract a hidden ZIP file from a BMP image using steganographic data interleaving, decompress the embedded file to find Mary Wollstonecraft Shelley's *Frankenstein*, and recover the flag hidden within",
+    "key_insight": "**Steganography through data interleaving:** Rather than hiding data in unused/LSB portions of pixels, this challenge hides a complete ZIP archive by interleaving it with (or replacing) parts of the BMP pixel data. The recovery requires understanding the specific 4-byte interval pattern used.",
+    "approach": "### 1. File Analysis\n- Downloaded the BMP image (2.1 MB, 960x540 pixels, 32-bit color)\n- Used `exiftool` to examine metadata and discovered unusual bit masks (555 color format stored in 32-bit)\n- Analyzed the binary structure to understand the image format\n\n### 2. Initial Attempts\nTried several common steganography approaches that didn't work:\n- LSB (least significant bit) extraction\n- Color channel separation and analysis\n- Standard image steganalysis tools (`zsteg`, `steghide`)\n- XOR combinati",
+    "tools": [
+      "curl` \u2014 download challenge image",
+      "exiftool` \u2014 analyze metadata and bit masks",
+      "binwalk` \u2014 check for embedded files",
+      "convert` (ImageMagick) \u2014 convert and analyze pixel data",
+      "python3` with `struct`, `zlib`, `re` \u2014 binary parsing and decompression",
+      "unzip` \u2014 verify ZIP integrity"
+    ],
+    "missing_tools": [
+      "None - all required tools were available in the base environment or via standard packages."
+    ],
+    "points": 300,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-03-24T18:20:42.696050",
+    "cost_usd": 0.6660064,
+    "num_turns": 63,
+    "duration_ms": 495134,
+    "model": "haiku"
+  },
+  {
+    "challenge": "WebNet0",
+    "slug": "webnet0",
+    "pattern": "TLS-encrypted HTTPS traffic capture with the server's RSA private key \u2014 decrypt and find the flag in a custom HTTP response header.",
+    "key_insight": "The `tls.keys_list` preference is **obsolete in tshark 4.x**. The correct modern syntax is `uat:rsa_keys:\"<keyfile>\",\"\"` (just path + empty password, no IP/port/protocol fields). The previous attempt failed because it was trying to implement TLS decryption manually in Python.",
+    "approach": "The challenge provides `capture.pcap` (HTTPS traffic) and `picopico.key` (RSA private key in PKCS#8 format). The cipher suite is `TLS_RSA_WITH_AES_256_GCM_SHA384` (0x009d), which uses RSA key exchange \u2014 meaning the private key can directly decrypt the pre-master secret and thus all session data.\n\nUsed tshark's `uat:rsa_keys` UAT preference (the modern replacement for the obsolete `tls.keys_list`) to load the private key and decrypt TLS inline:\n\n```bash\ntshark -o 'uat:rsa_keys:\"/path/to/picopico.",
+    "tools": [
+      "tshark 4.6.3"
+    ],
+    "missing_tools": [],
+    "points": 350,
+    "solved": true,
+    "flag": "picoCTF{nongshim.shrimp.crackers}",
+    "timestamp": "2026-03-24T18:29:08.018083",
+    "cost_usd": 0.48746249999999997,
+    "num_turns": 29,
+    "duration_ms": 152137,
+    "model": "sonnet"
+  },
+  {
+    "challenge": "Blast from the Past",
+    "slug": "blast-from-the-past",
+    "pattern": "Set all timestamps in a Samsung JPEG to Unix epoch + 1ms (`1970:01:01 00:00:00.001+00:00`) across 7 different timestamp fields, including a Samsung-specific proprietary field embedded in the image bin",
+    "key_insight": "The checker validates 7 timestamps total:\n- `IFD0:ModifyDate`\n- `ExifIFD:DateTimeOriginal`\n- `ExifIFD:CreateDate`\n- `Composite:SubSecCreateDate`\n- `Composite:SubSecDateTimeOriginal`\n- `Composite:SubSecModifyDate`\n- `Samsung:TimeStamp` (requires full timezone-aware format)\n\nThe Samsung `TimeStamp` fi",
+    "approach": "1. Used `exiftool` to set EXIF timestamps:\n   - `DateTimeOriginal`, `CreateDate`, `ModifyDate` \u2192 `1970:01:01 00:00:00.001`\n   - `SubSecTime*` fields \u2192 `001`\n   - `Samsung:TimeStamp` \u2192 `1970:01:01 00:00:00.001+00:00`\n\n2. Binary-patched the Samsung `Image_UTC_Data` field (a 13-digit epoch-ms value in the JPEG trailer) from `1700513181420` \u2192 `0000000000001`.\n\n3. Submitted to the checker service with **`ncat`** (NOT `nc`):\n   ```\n   ncat -w 10 mimas.picoctf.net 50283 < modified.jpg\n   ```",
+    "tools": [
+      "exiftool` \u2014 EXIF/metadata editing",
+      "ncat` (nmap) \u2014 file transfer to TCP service",
+      "Python \u2014 binary patching of Samsung trailer"
+    ],
+    "missing_tools": [
+      "None \u2014 all tools available in the nix flake."
+    ],
+    "points": 300,
+    "solved": true,
+    "flag": "picoCTF{71m3_7r4v311ng_p1c7ur3_83ecb41c}",
+    "timestamp": "2026-03-24T18:31:26.032512",
+    "cost_usd": 0.7154812499999998,
+    "num_turns": 32,
+    "duration_ms": 304690,
+    "model": "sonnet"
+  },
+  {
+    "challenge": "m00nwalk2 (300pts, Forensics)",
+    "slug": "m00nwalk2",
+    "pattern": "SSTV audio in clue1.wav encodes a password image. Use that password with steghide on message.wav to extract the flag.",
+    "key_insight": "The clue files are SSTV transmissions containing a password. The password is used with steghide (not SSTV) on `message.wav`. Previous attempts got lost trying to SSTV-decode `message.wav` \u2014 only the clues needed SSTV decoding.",
+    "approach": "",
+    "tools": [],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{the_answer_lies_hidden_in_plain_sight}",
+    "timestamp": "2026-03-24T18:32:28.158410",
+    "cost_usd": 0.6282650999999999,
+    "num_turns": 3,
+    "duration_ms": 333629,
+    "model": "sonnet"
+  },
+  {
+    "challenge": "Operation Oni",
+    "slug": "operation-oni",
+    "pattern": "",
+    "key_insight": "1. **Forensics involves filesystem analysis:** The challenge tests ability to mount and analyze disk images\n2. **Partition offsets matter:** Correctly calculating the offset is critical for mounting\n3. **SSH key extraction:** Finding credentials hidden in filesystem artifacts\n4. **Remote shell acces",
+    "approach": "",
+    "tools": [
+      "wget/curl` - Download disk image",
+      "gunzip` - Decompress gzip archive",
+      "fdisk` - Analyze partition table and determine offsets",
+      "mount` - Mount filesystem with loop device",
+      "ssh` - Secure shell to remote machine",
+      "kpartx` - Alternative for partition mapping (if needed)"
+    ],
+    "missing_tools": [],
+    "points": 300,
+    "solved": false,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-03-24T18:16:52.997586",
+    "cost_usd": 0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": ""
+  },
+  {
+    "challenge": "Operation Orchid",
+    "slug": "operation-orchid",
+    "pattern": "Download a disk image and extract the flag by analyzing the filesystem and decrypting an encrypted file.",
+    "key_insight": "- **Shell History**: The `/root/.ash_history` file contained the encryption command and password, making the flag trivial to decrypt once found.\n- **Filesystem Forensics**: Using `debugfs` allowed direct access to files without filesystem mounting, bypassing permission issues in containerized enviro",
+    "approach": "1. **Disk Image Analysis**: The challenge provides a compressed disk image (400MB). The image contains three partitions: two Linux ext4 filesystems and a Linux swap partition.\n\n2. **Filesystem Examination**: Used `debugfs` to explore the ext4 filesystem without mounting, searching for interesting files in the `/root` directory.\n\n3. **Discovery**: Found two critical files:\n   - `/root/.ash_history` - Shell command history containing the encryption command and password\n   - `/root/flag.txt.enc` - ",
+    "tools": [
+      "gunzip` - Decompress the disk image",
+      "dd` - Extract filesystem partitions",
+      "debugfs` - Examine ext4 filesystem without mounting",
+      "openssl` - Decrypt AES-256 encrypted data",
+      "file`, `strings`, `binwalk` - Initial triage"
+    ],
+    "missing_tools": [
+      "None - all required tools were available in the environment."
+    ],
+    "points": 400,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-03-26T18:13:59.199202",
+    "cost_usd": 0.22375404999999998,
+    "num_turns": 32,
+    "duration_ms": 85566,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Investigative Reversing 3",
+    "slug": "investigative-reversing-3",
+    "pattern": "Extract a hidden flag from a steganographically encoded BMP image using LSB (Least Significant Bit) extraction combined with a specific bit-reading algorithm.",
+    "key_insight": "The critical breakthrough was recognizing this as an LSB steganography challenge and finding writeups that revealed the exact file offset (0x2d3) and extraction algorithm. Manually analyzing the binary through disassembly would have been more time-consuming; using known pattern recognition for this ",
+    "approach": "### Challenge Analysis\n\nThe challenge provides two files:\n1. **mystery** - A 64-bit ELF binary (the encoder reference)\n2. **encoded.bmp** - A BMP image containing the encoded flag\n\nThe binary performs encoding by reading a `flag.txt` and a reference image `original.bmp`, then encoding them into `encoded.bmp` using LSB manipulation and bitwise operations.\n\n### Reverse Engineering\n\nRather than reverse-engineer the entire binary algorithm from scratch, the key insight is recognizing this as a **Lea",
+    "tools": [
+      "pwntools** (`pwn` library) - For bit manipulation (`unbits()` function)",
+      "Python 3"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{4n0th3r_L5b_pr0bl3m_000000000000012cceb8f}",
+    "timestamp": "2026-03-26T18:20:38.111095",
+    "cost_usd": 1.0112310500000001,
+    "num_turns": 67,
+    "duration_ms": 468615,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Investigative Reversing 4",
+    "slug": "investigative-reversing-4",
+    "pattern": "",
+    "key_insight": "The previous failed path treated the data like row-based pixel extraction from one BMP. The actual layout is file-byte based, starts at absolute offset `0x7e3`, and the five files must be read in reverse order because the encoder increments a global flag index while processing `Item05` to `Item01`.",
+    "approach": "I started with the required triage on the binary and all five BMP files. That ruled out simple metadata/trailer tricks and showed this was another small ELF-based stego challenge in the same series.\n\nThe key step was reversing `mystery` instead of guessing at the extraction pattern. Disassembly showed:\n\n- `main` reads 50 bytes from `flag.txt`\n- `encodeAll` processes files in reverse order: `Item05_cp.bmp` down to `Item01_cp.bmp`\n- `encodeDataInFile` copies the first `0x7e3` bytes unchanged\n- The",
+    "tools": [
+      "file",
+      "exiftool",
+      "strings",
+      "binwalk",
+      "objdump",
+      "radare2",
+      "Python 3",
+      "_submit_flag.py"
+    ],
+    "missing_tools": [],
+    "points": 400,
+    "solved": true,
+    "flag": "picoCTF{N1c3_R3ver51ng_5k1115_000000000003c500b8a}",
+    "timestamp": "2026-03-26T18:46:20.575399",
+    "cost_usd": 0.0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": "opus"
+  },
+  {
+    "challenge": "WebNet1",
+    "slug": "webnet1",
+    "pattern": "Decrypt TLS-encrypted PCAP using a provided RSA private key, extract an image, and read the flag from its EXIF metadata.",
+    "key_insight": "The flag was hidden in EXIF metadata (Artist field) of an image served over TLS. The challenge tests ability to decrypt TLS traffic with a known RSA key and inspect file metadata.",
+    "approach": "1. Used the provided `picopico.key` RSA private key to decrypt TLS traffic in `capture.pcap` with tshark's `uat:rsa_keys` option.\n2. Exported HTTP objects from the decrypted traffic \u2014 found `second.html`, `starter-template.css`, `vulture.jpg`, and `favicon.ico`.\n3. Ran `strings` / `exiftool` on `vulture.jpg` \u2014 the flag was stored in the EXIF **Artist** field.",
+    "tools": [
+      "tshark (TLS decryption + HTTP object export)",
+      "exiftool (EXIF metadata extraction)",
+      "strings (quick flag search)"
+    ],
+    "missing_tools": [],
+    "points": 450,
+    "solved": true,
+    "flag": "picoCTF{honey.roasted.peanuts}",
+    "timestamp": "2026-03-26T23:44:53.542015",
+    "cost_usd": 0.30102100000000004,
+    "num_turns": 16,
+    "duration_ms": 65715,
+    "model": "haiku"
+  },
+  {
+    "challenge": "UnforgottenBits",
+    "slug": "unforgottenbits",
+    "pattern": "Multi-layer forensics challenge requiring disk image analysis, steganography extraction, and AES encryption decryption. The flag is hidden in a decrypted ledger file that's encrypted on the disk.",
+    "key_insight": "1. **Multi-layer Encoding**: The challenge uses three distinct security mechanisms:\n   - Filesystem encryption (AES-256-CBC on disk files)\n   - Steganography (steghide in BMP images)\n   - Data recovery (slack space analysis mentioned in challenge name)\n\n2. **OPSEC Failure**: The entire solution is o",
+    "approach": "",
+    "tools": [
+      "fls/istat** (sleuthkit): Filesystem analysis and file recovery",
+      "mount**: Ext4 filesystem mounting",
+      "steghide**: Steganography extraction with password",
+      "openssl**: AES-256-CBC decryption",
+      "strings/grep**: Content search",
+      "file/binwalk**: File type identification"
+    ],
+    "missing_tools": [
+      "None \u2014 all required tools were available:",
+      "steghide` (steganography)",
+      "openssl` (encryption/decryption)",
+      "Standard Linux utilities"
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{f473_53413d_8a5065d1}",
+    "timestamp": "2026-03-27T00:01:09.175757",
+    "cost_usd": 0.19837875000000002,
+    "num_turns": 10,
+    "duration_ms": 26285,
+    "model": ""
+  },
+  {
+    "challenge": "So Meta",
+    "slug": "so-meta",
+    "pattern": "Find the flag hidden in a PNG image by extracting EXIF metadata.",
+    "key_insight": "",
+    "approach": "### Triage\n1. Identified the challenge file: `pico_img.png` (600x600 PNG image)\n2. The challenge name \"So Meta\" is a clear hint pointing toward **metadata**\n\n### Key Insight\nThe challenge leverages the fact that image files can store hidden data in their EXIF metadata fields, not just in pixel data. PNG files support embedded metadata through EXIF headers, which are often overlooked during casual inspection.\n\n### Exploitation\nUsed `exiftool` to extract all metadata from the PNG file:\n```bash\nexi",
+    "tools": [
+      "exiftool` \u2014 Extract and examine image metadata",
+      "file` \u2014 Identify file type",
+      "Python 3 with subprocess \u2014 Automate extraction"
+    ],
+    "missing_tools": [
+      "None \u2014 all required tools were available."
+    ],
+    "points": 150,
+    "solved": true,
+    "flag": "picoCTF{s0_m3ta_9a8b5aa1}",
+    "timestamp": "2026-04-08T14:26:44.410676",
+    "cost_usd": 0.062096950000000005,
+    "num_turns": 8,
+    "duration_ms": 29541,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Information",
+    "slug": "information",
+    "pattern": "The flag was hidden in XMP metadata within the JPEG file's EXIF data. Specifically, it was stored in the \"License\" field as a base64-encoded string.",
+    "key_insight": "The challenge title \"Information\" and description \"Files can always be changed in a secret way\" pointed directly to metadata. EXIF/XMP metadata in image files is a common steganography vector because:\n1. It's invisible to most viewers\n2. Metadata fields accept arbitrary string values\n3. Files can be",
+    "approach": "### Step 1: Triage\nI started by identifying the file type and extracting metadata:\n```bash\nfile cat.jpg          # JPEG image, 2560x1598\nexiftool cat.jpg      # Extract all metadata\n```\n\n### Step 2: Metadata Extraction\nThe `exiftool` output revealed an interesting field:\n- **License field:** `cGljb0NURnt0aGVfbTN0YWRhdGFfMXNfbW9kaWZpZWR9`\n\n### Step 3: Decoding\nDecoding the base64 string:\n```bash\necho \"cGljb0NURnt0aGVfbTN0YWRhdGFfMXNfbW9kaWZpZWR9\" | base64 -d\n# Output: picoCTF{the_m3tadata_1s_modi",
+    "tools": [
+      "exiftool` - EXIF/XMP metadata extraction",
+      "binwalk` - Embedded file detection",
+      "Python 3 with PIL` - LSB steganography analysis",
+      "base64` - String decoding"
+    ],
+    "missing_tools": [
+      "None - all required tools were already installed."
+    ],
+    "points": 10,
+    "solved": true,
+    "flag": "picoCTF{the_m3tadata_1s_modified}",
+    "timestamp": "2026-04-08T15:01:14.874233",
+    "cost_usd": 0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Glory of the Garden",
+    "slug": "glory-of-the-garden",
+    "pattern": "A garden image (`garden.jpg`) contains a hidden flag embedded as plain ASCII text at the end of the JPEG file structure.",
+    "key_insight": "JPEG files are binary formats that can contain arbitrary ASCII text strings in their data structure beyond just the image metadata. The flag was not encoded or hidden through steganography techniques (LSB encoding, steghide, etc.), but was simply appended as plaintext to the end of the file, accessi",
+    "approach": "1. **File Identification**: Used `file` command to identify `garden.jpg` as a JPEG image\n2. **Triage**: Applied standard forensics triage (strings, exiftool, binwalk) to identify potential hidden data\n3. **Binary Analysis**: Examined the file in hex using `xxd` to inspect file structure\n4. **Flag Discovery**: Found ASCII text at the end of the JPEG file containing the flag message",
+    "tools": [
+      "file` - Identify file type",
+      "strings` - Extract ASCII strings from binary files",
+      "xxd` - Hex viewer for binary inspection",
+      "exiftool` - EXIF metadata extraction (tried, not needed)",
+      "binwalk` - Binary analysis (tried, not needed)"
+    ],
+    "missing_tools": [
+      "None - all required tools were available in the environment."
+    ],
+    "points": 50,
+    "solved": true,
+    "flag": "picoCTF{more_than_m33ts_the_3y398ee229a}",
+    "timestamp": "2026-04-08T15:04:07.583546",
+    "cost_usd": 0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": "haiku"
+  }
+]

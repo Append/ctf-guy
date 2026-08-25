@@ -1,8 +1,8 @@
 services:
   ctfd:
-    image: ctfd/ctfd:latest
+    image: ctfd/ctfd:3.8.7@sha256:284f1f06c5464108c4eaaea8a28934cb1e81d491e3f0fe60f3d686cf38593e41
     ports:
-      - "8001:8000"
+      - "127.0.0.1:8001:8000"
     environment:
       - DATABASE_URL=sqlite:////opt/CTFd/CTFd/ctfd.db
       - SECRET_KEY=testing-secret-key-do-not-use-in-prod

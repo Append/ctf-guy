@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Tests for all manager heuristic detectors."""
 
+import contextlib
 import time
-
-import pytest
 
 from ai.manager import (
     BruteForceDetector,
@@ -566,10 +565,8 @@ class TestManagerIntegration:
             )
             await asyncio.sleep(0.3)
             task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await task
-            except asyncio.CancelledError:
-                pass
 
             # Security alert should have been written
             feedback_path = Path(workspace) / "_live_feedback.md"
@@ -614,10 +611,8 @@ class TestManagerIntegration:
             )
             await asyncio.sleep(0.3)
             task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await task
-            except asyncio.CancelledError:
-                pass
 
             # No feedback should have been written (loop detector is disabled)
             feedback_path = Path(workspace) / "_live_feedback.md"

@@ -85,10 +85,7 @@ class ScoutCog(commands.Cog):
 
         # Parse CTF name from URL (or event name)
         parsed = urlparse(url)
-        if event:
-            ctf_name = slugify(event)
-        else:
-            ctf_name = parsed.hostname.split(".")[0] if parsed.hostname else "ctf"
+        ctf_name = slugify(event) if event else parsed.hostname.split(".")[0] if parsed.hostname else "ctf"
 
         try:
             event_msg = f" (event: {event})" if event else ""
@@ -229,7 +226,10 @@ class ScoutCog(commands.Cog):
                 thread_name = f"{slug}-{chall.points}pt"[:100]
                 files_url = None
                 if hasattr(self.bot, "file_server_base_url") and self.bot.file_server_base_url:
+                    _tok = getattr(self.bot, "file_server_token", "")
                     files_url = f"{self.bot.file_server_base_url}/{cat_slug}/{slug}/"
+                    if _tok:
+                        files_url += f"?t={_tok}"
                 embed = challenge_embed(
                     chall.name,
                     chall.category,
@@ -374,10 +374,7 @@ class ScoutCog(commands.Cog):
             raise ValueError(f"Unknown platform: {platform_type}")
 
     def _is_authorized(self, interaction: discord.Interaction) -> bool:
-        allowed = self.bot.config.allowed_user_ids
-        if not allowed:
-            return True
-        return interaction.user.id in allowed
+        return self.bot.config.is_user_allowed(interaction.user.id)
 
 
 async def setup(bot: commands.Bot):

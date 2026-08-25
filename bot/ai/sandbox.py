@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Bwrap sandbox helpers shared between Claude Code and Codex solvers."""
 
+import contextlib
 import logging
 import os
 import shutil
+import signal
 import tempfile
 from pathlib import Path
-
-import signal
 
 log = logging.getLogger(__name__)
 
@@ -21,10 +21,8 @@ def kill_process_tree(proc) -> None:
         pgid = os.getpgid(proc.pid)
         os.killpg(pgid, signal.SIGKILL)
     except (ProcessLookupError, PermissionError, OSError):
-        try:
+        with contextlib.suppress(ProcessLookupError):
             proc.kill()
-        except ProcessLookupError:
-            pass
 
 
 # Env vars that must NEVER reach solver subprocesses
@@ -34,7 +32,9 @@ _SENSITIVE_VARS = {
     "ANTHROPIC_API_KEY",
     # Note: OPENAI_API_KEY intentionally NOT stripped — Codex CLI needs it to authenticate
     "CTFD_TOKEN",
+    "CTFD_SESSION",
     "CTFD_URL",
+    "DISCORD_ALERT_WEBHOOK",
     "PICO_USERNAME",
     "PICO_PASSWORD",
     "ALLOWED_USER_IDS",

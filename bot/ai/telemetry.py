@@ -8,10 +8,11 @@ Disabled entirely if URLs are not set.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 
@@ -55,31 +56,25 @@ class TelemetryExporter:
         for task in (self._flush_logs_task, self._flush_metrics_task):
             if task:
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError, Exception):
                     await task
-                except (asyncio.CancelledError, Exception):
-                    pass
         # Final drain of any remaining events
         await self._flush_logs()
         await self._flush_metrics()
         if self._client:
-            try:
+            with contextlib.suppress(Exception):
                 await asyncio.wait_for(self._client.aclose(), timeout=5)
-            except Exception:
-                pass
         log.info("Telemetry stopped")
 
     def ship_log(self, event_type: str, **fields):
         """Enqueue a log event. Non-blocking, silently drops on full queue."""
         entry = {
             "_msg": event_type,
-            "_time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "_time": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             **{k: v for k, v in fields.items() if v is not None},
         }
-        try:
+        with contextlib.suppress(asyncio.QueueFull):
             self._log_queue.put_nowait(entry)
-        except asyncio.QueueFull:
-            pass
 
     def ship_metric(self, name: str, value: float, **labels):
         """Enqueue a metric data point. Non-blocking, silently drops on full queue."""
@@ -91,10 +86,8 @@ class TelemetryExporter:
             "values": [value],
             "timestamps": [int(time.time() * 1000)],
         }
-        try:
+        with contextlib.suppress(asyncio.QueueFull):
             self._metric_queue.put_nowait(entry)
-        except asyncio.QueueFull:
-            pass
 
     async def _flush_logs_loop(self):
         try:
@@ -217,15 +210,14 @@ class VictoriaLogsHandler(logging.Handler):
             return
         if record.name in self._ignore_loggers:
             return
-        try:
+        # Never break the app over telemetry
+        with contextlib.suppress(Exception):
             _exporter.ship_log(
                 "log",
                 level=record.levelname,
                 logger=record.name,
                 message=self.format(record)[:500],
             )
-        except Exception:
-            pass  # Never break the app over telemetry
 
 
 def install_log_handler() -> None:

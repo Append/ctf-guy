@@ -10,7 +10,7 @@ import asyncio
 import json
 import logging
 import shutil
-import time
+from datetime import UTC
 from pathlib import Path
 
 from ai.openrouter import OpenRouterClient
@@ -84,7 +84,7 @@ def render_mermaid(graph: dict) -> str:
     challenge = meta.get("challenge", "?")
     attempt = meta.get("attempt", "?")
     model = meta.get("model", "?")
-    outcome = meta.get("outcome", "?")
+    meta.get("outcome", "?")
 
     # Use top-down layout with config for thicker lines
     lines.append("---")
@@ -281,13 +281,13 @@ def build_graph(
     duration_ms: int,
 ) -> dict:
     """Assemble a complete attack graph from collected data."""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     graph = {
         "meta": {
             "challenge": challenge_name,
             "attempt": 0,  # set by caller based on existing graphs
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "model": model,
             "outcome": outcome,
             "cost_usd": cost_usd,

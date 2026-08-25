@@ -991,7 +991,7 @@
     "missing_tools": [],
     "points": 0,
     "solved": true,
-    "flag": "picoCTF{` revealed the key is `08555787` \u2014 the last 8 digits of the compromised device's IMSI (310410308555787), repeating cyclically.\n\n## Key Insight\n\nThe XOR encryption key is derived from the compromised device's IMSI, found in the HTTP registration User-Agent header and DNS query. The \"non-HTTP traffic\" hint points to the carrier broadcasts and DNS queries that establish the IMSI-to-device mapping.\n\n## Tools Used\n\n- tshark, xxd (triage)\n- Python 3 + scapy (solve script)\n\n## Flag\n\n`picoCTF{r0gu3_c3ll_t0w3r_dbc40831}",
+    "flag": "picoCTF{r0gu3_c3ll_t0w3r_dbc40831}",
     "timestamp": "2026-03-24T18:07:14.753445",
     "cost_usd": 0.6779419999999999,
     "num_turns": 18,

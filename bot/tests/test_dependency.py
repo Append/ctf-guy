@@ -4,8 +4,6 @@
 import asyncio
 from dataclasses import dataclass
 
-import pytest
-
 from ai.solve_utils import detect_series
 
 

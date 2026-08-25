@@ -16,6 +16,7 @@ archive/
 
 # Bot runtime
 bot/.env
+.claude/settings.local.json
 bot/data/
 bot/.venv/
 bot/pico_*.json

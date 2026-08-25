@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 """Tests for ai/openrouter.py — OpenRouter client with rate-limit retry."""
 
-import asyncio
 import time
 
-import pytest
-
-from ai.openrouter import OpenRouterClient, _parse_reset_delay, _backoff_delay
+from ai.openrouter import OpenRouterClient, _backoff_delay, _parse_reset_delay
 
 
 class TestParseResetDelay:

@@ -37,10 +37,7 @@ class LearnCog(commands.Cog):
         )
 
     def _is_authorized(self, interaction: discord.Interaction) -> bool:
-        allowed = self.bot.config.allowed_user_ids
-        if not allowed:
-            return True
-        return interaction.user.id in allowed
+        return self.bot.config.is_user_allowed(interaction.user.id)
 
 
 async def setup(bot: commands.Bot):

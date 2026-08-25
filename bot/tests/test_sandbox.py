@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """Tests for sandbox utilities: env sanitization, bwrap cmd, artifact sync."""
 
-import os
 from pathlib import Path
 from unittest.mock import MagicMock
-
-import pytest
 
 
 def test_solver_env_strips_secrets(monkeypatch):

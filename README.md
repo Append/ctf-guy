@@ -8,7 +8,11 @@ automatic flag submission, and a telemetry stack so you can watch every agent th
 
 > **Scope:** This is competition tooling. It is built to be pointed at CTF infrastructure you have been
 > explicitly authorized to attack — the designated challenge hosts of an event you are registered for.
-> See [Responsible use](#responsible-use).
+> See [Responsible use](#responsible-use) and [SECURITY.md](SECURITY.md).
+
+> **License:** the code is **Apache-2.0**; the learned pattern corpus under `solvers/patterns/` is
+> **CC BY-NC 4.0 (noncommercial)**. The repository as a whole is therefore source-available rather than
+> open source under the OSI definition. See [License](#license).
 
 ## What it does
 
@@ -72,6 +76,9 @@ changing solver internals.
 solving safe from agents stepping on each other's files. It is **not** a security boundary: the sandbox
 binds the full host filesystem. Run this on a machine you would be comfortable handing to an autonomous
 agent, not on your daily driver with production credentials in `~/.aws`.
+
+The full threat model, and what the shipped defaults do and don't protect, is in
+[SECURITY.md](SECURITY.md).
 
 ## Responsible use
 

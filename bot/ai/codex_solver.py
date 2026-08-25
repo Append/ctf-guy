@@ -6,16 +6,16 @@ No cost tracking — uses timeout as the only constraint.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import shutil
-import tempfile
 
 from ai.claude_code import (
     SolveResult,
-    _safe_send,
-    _is_docker_start_cmd,
     _extract_container_ids,
+    _is_docker_start_cmd,
+    _safe_send,
     cleanup_docker_containers,
 )
 
@@ -52,8 +52,9 @@ async def solve_with_codex(
     Uses `codex exec` in full-auto mode. No cost tracking
     (Codex doesn't report it). Returns SolveResult.
     """
-    from ai.telemetry import ship_log, ship_metric
     from pathlib import Path
+
+    from ai.telemetry import ship_log, ship_metric
 
     _labels = {"challenge": Path(challenge_dir).name, "model": "codex"}
     if telem_labels:
@@ -67,7 +68,8 @@ async def solve_with_codex(
     log.info(f"Codex: starting in {challenge_dir}")
 
     from pathlib import Path
-    from ai.sandbox import create_bwrap_workspace, build_bwrap_cmd, sync_back_artifacts
+
+    from ai.sandbox import build_bwrap_cmd, create_bwrap_workspace, sync_back_artifacts
 
     challenge_path = Path(challenge_dir).resolve()
     tmpdir, upperdir = create_bwrap_workspace(challenge_path)
@@ -177,7 +179,8 @@ async def solve_with_codex(
                         ship_log("agent.error", error=error_msg[:300], **_labels)
                         if "limit" in error_msg.lower() or "rate" in error_msg.lower():
                             global _rate_limited_until
-                            import time as _time, re as _re
+                            import re as _re
+                            import time as _time
 
                             # Try to parse reset time like "try again at 8:26 PM"
                             cooldown = 1800  # Default 30 min
@@ -224,7 +227,7 @@ async def solve_with_codex(
                     log.debug(f"Codex non-JSON line: {line[:200]}")
                     full_output.append(line)
 
-        from ai.flag_events import register, FLAG_GRACE_PERIOD
+        from ai.flag_events import FLAG_GRACE_PERIOD, register
 
         flag_event = None
         if challenge_id is not None:
@@ -260,10 +263,8 @@ async def solve_with_codex(
                         ship_log("agent.grace_period_expired", **_labels)
                 else:
                     reader_task.cancel()
-                    try:
+                    with contextlib.suppress(asyncio.CancelledError, Exception):
                         await reader_task
-                    except (asyncio.CancelledError, Exception):
-                        pass
                     from ai.sandbox import kill_process_tree
 
                     kill_process_tree(proc)

@@ -4,16 +4,22 @@ version = "0.1.0"
 description = "Discord CTF solver bot for ctf-guy"
 requires-python = ">=3.12"
 dependencies = [
+    # Imported directly in run.py for the challenge file server; do not rely
+    # on discord.py to supply it transitively.
+    "aiohttp>=3.14.2",
     "discord.py>=2.3",
     "openai>=1.0",
     "httpx",
     "python-dotenv",
     "playwright",
-    "pyghidra-mcp",
 ]
 
 [project.optional-dependencies]
 dev = ["ruff", "black", "pytest", "pytest-asyncio"]
+# Only needed if GHIDRA_MCP_ENABLED=true. The server is spawned out-of-process
+# via `uvx pyghidra-mcp` and never imported here, so it stays out of the default
+# install — it drags in chromadb, which currently has unfixed advisories.
+ghidra = ["pyghidra-mcp"]
 
 [tool.black]
 line-length = 120

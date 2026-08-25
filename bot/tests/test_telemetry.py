@@ -4,8 +4,6 @@
 import asyncio
 import logging
 
-import pytest
-
 from ai.telemetry import (
     TelemetryExporter,
     VictoriaLogsHandler,

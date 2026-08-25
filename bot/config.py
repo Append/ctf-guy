@@ -28,6 +28,7 @@ class Config:
     ctfd_token: str
     ctfd_session: str  # Session cookie (fallback if API tokens not available)
     allowed_user_ids: set[int]
+    allow_all_users: bool  # Explicit opt-in to run with no allowlist
     ctf_root: Path
     default_model: str
     heavy_model: str
@@ -51,6 +52,7 @@ class Config:
     deep_analysis_model: str  # Model for deep analysis teardown subagents
     fast_mode: bool  # Enable Claude Code fast mode (faster output, higher cost)
     file_server_port: int  # Port for challenge file server (0 = disabled)
+    file_server_bind: str  # Interface to bind the file server to
     victoria_logs_url: str  # VictoriaLogs URL (empty = disabled)
     victoria_metrics_url: str  # VictoriaMetrics URL (empty = disabled)
     telemetry_batch_size: int  # Events per flush batch
@@ -66,6 +68,16 @@ class Config:
 
         allowed = os.environ.get("ALLOWED_USER_IDS", "")
         allowed_ids = {int(uid.strip()) for uid in allowed.split(",") if uid.strip()}
+        allow_all = os.environ.get("ALLOW_ALL_USERS", "").lower() in ("1", "true", "yes")
+
+        # Fail closed. Commands here launch autonomous agents, spend money, and
+        # can open a shell, so an empty allowlist must be a deliberate choice
+        # rather than the default that happens when the var is unset.
+        if not allowed_ids and not allow_all:
+            raise RuntimeError(
+                "ALLOWED_USER_IDS is empty. Set it to a comma-separated list of Discord "
+                "user IDs, or set ALLOW_ALL_USERS=true to deliberately allow everyone."
+            )
 
         return cls(
             discord_token=os.environ["DISCORD_TOKEN"],
@@ -75,6 +87,7 @@ class Config:
             ctfd_token=os.environ.get("CTFD_TOKEN", ""),
             ctfd_session=os.environ.get("CTFD_SESSION", ""),
             allowed_user_ids=allowed_ids,
+            allow_all_users=allow_all,
             ctf_root=Path(os.environ.get("CTF_ROOT", str(bot_dir.parent))),
             default_model=os.environ.get("DEFAULT_MODEL", "anthropic/claude-sonnet-4.6"),
             heavy_model=os.environ.get("HEAVY_MODEL", "anthropic/claude-opus-4.6"),
@@ -98,8 +111,19 @@ class Config:
             deep_analysis_model=os.environ.get("DEEP_ANALYSIS_MODEL", "haiku"),
             fast_mode=os.environ.get("FAST_MODE", "").lower() in ("1", "true", "yes"),
             file_server_port=int(os.environ.get("FILE_SERVER_PORT", "8080")),
+            file_server_bind=os.environ.get("FILE_SERVER_BIND", "127.0.0.1"),
             victoria_logs_url=os.environ.get("VICTORIA_LOGS_URL", ""),
             victoria_metrics_url=os.environ.get("VICTORIA_METRICS_URL", ""),
             telemetry_batch_size=int(os.environ.get("TELEMETRY_BATCH_SIZE", "50")),
             telemetry_flush_interval=float(os.environ.get("TELEMETRY_FLUSH_INTERVAL", "1.0")),
         )
+
+    def is_user_allowed(self, user_id: int) -> bool:
+        """Authorization check shared by every command cog.
+
+        Fails closed: an empty allowlist only permits everyone when
+        ALLOW_ALL_USERS was explicitly set (enforced in from_env).
+        """
+        if self.allow_all_users:
+            return True
+        return user_id in self.allowed_user_ids

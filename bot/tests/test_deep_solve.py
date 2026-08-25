@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Tests for bot/ai/deep_solve.py — prompt builders and merge logic."""
 
-import asyncio
 import json
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -29,7 +28,6 @@ for _k in _STUB_KEYS:
 
 sys.modules["ai.claude_code"] = _cc_stub  # ensure our stub wins
 
-import ai.deep_solve as _ds  # noqa: E402 — import after stubs are in place
 
 # Restore sys.modules: remove stubs that weren't there before so later imports
 # of the real ai.claude_code (e.g. test_mcp_config) work correctly.
@@ -47,8 +45,6 @@ from ai.deep_solve import (  # noqa: E402
     _build_infra_analyst_prompt,
     _build_source_analyst_prompt,
     _merge_analyses,
-    _run_infra_analyst,
-    _run_source_analyst,
     _run_teardown,
     deep_solve,
 )

@@ -42,6 +42,7 @@ def mock_config(tmp_ctf_root):
         ctfd_token="",
         ctfd_session="",
         allowed_user_ids=set(),
+        allow_all_users=True,
         ctf_root=tmp_ctf_root,
         default_model="sonnet",
         heavy_model="opus",
@@ -67,6 +68,7 @@ def mock_config(tmp_ctf_root):
         file_server_port=0,
         victoria_logs_url="",
         victoria_metrics_url="",
+        file_server_bind="127.0.0.1",
         telemetry_batch_size=50,
         telemetry_flush_interval=1.0,
     )

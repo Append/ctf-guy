@@ -2,10 +2,11 @@
 """Tests for flag-aware timeout bypass logic."""
 
 import asyncio
+import contextlib
 
 import pytest
 
-from ai.flag_events import FLAG_GRACE_PERIOD, register, notify, unregister
+from ai.flag_events import FLAG_GRACE_PERIOD, notify, register, unregister
 
 
 class TestTwoPhaseTimeout:
@@ -21,7 +22,7 @@ class TestTwoPhaseTimeout:
             await asyncio.sleep(100)
 
         solver = asyncio.create_task(fake_solver())
-        done, pending = await asyncio.wait(
+        done, _pending = await asyncio.wait(
             {solver},
             timeout=0.2,
         )
@@ -29,10 +30,8 @@ class TestTwoPhaseTimeout:
         if solver not in done:
             timed_out = True
             solver.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await solver
-            except asyncio.CancelledError:
-                pass
 
         assert timed_out
         assert not flag_event.is_set()
@@ -56,7 +55,7 @@ class TestTwoPhaseTimeout:
 
         # Original timeout 0.2s would kill solver. But flag is set,
         # so we grant grace period instead.
-        done, pending = await asyncio.wait({solver}, timeout=0.2)
+        done, _pending = await asyncio.wait({solver}, timeout=0.2)
         if solver not in done and flag_event.is_set():
             # Grace period
             await asyncio.wait_for(solver, timeout=FLAG_GRACE_PERIOD)
@@ -73,7 +72,7 @@ class TestTwoPhaseTimeout:
             await asyncio.sleep(1000)
 
         solver = asyncio.create_task(endless_solver())
-        done, pending = await asyncio.wait({solver}, timeout=0.0)
+        _done, _pending = await asyncio.wait({solver}, timeout=0.0)
 
         # Flag is set, grant grace period — but it's short for test
         timed_out = False
@@ -106,19 +105,20 @@ class TestRaceFlagSentinel:
             await asyncio.sleep(0.05)
             notify(600, flag="picoCTF{test}", solver_id="1")
 
-        asyncio.create_task(fire())
+        fire_task = asyncio.create_task(fire())
 
         # Wait with 5s timeout (simulating the race poll interval)
         # Should return much faster than 5s because sentinel completes
         import time
 
         start = time.monotonic()
-        done, pending = await asyncio.wait(
+        done, _pending = await asyncio.wait(
             {racer1, racer2, sentinel},
             return_when=asyncio.FIRST_COMPLETED,
             timeout=5,
         )
         elapsed = time.monotonic() - start
+        await fire_task
 
         assert sentinel in done
         assert event.is_set()
@@ -128,10 +128,8 @@ class TestRaceFlagSentinel:
         racer1.cancel()
         racer2.cancel()
         for t in [racer1, racer2]:
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await t
-            except asyncio.CancelledError:
-                pass
         unregister(600)
 
     @pytest.mark.asyncio
@@ -156,9 +154,7 @@ class TestRaceFlagSentinel:
 
         # Cleanup
         winner.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await winner
-        except asyncio.CancelledError:
-            pass
         unregister(700)
         assert not completed  # Winner was still working when we returned

@@ -98,9 +98,8 @@ class TestWriteProgressFile:
 
 def test_build_solve_prompt_injects_attack_graph(tmp_path, tmp_ctf_root):
     """build_solve_prompt includes _attack_graph.md content when present."""
-    from db.challenges import ChallengeRecord
-
     from ai.solve_utils import build_solve_prompt
+    from db.challenges import ChallengeRecord
 
     chall_dir = tmp_path / "misc" / "test-chall"
     chall_dir.mkdir(parents=True)

@@ -3,10 +3,7 @@
 
 import asyncio
 import json
-import time
 from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
 
 
 def test_collector_records_tool_calls():

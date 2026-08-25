@@ -8,6 +8,7 @@ The challenge directory is bind-mounted so all artifacts persist.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import dataclasses
 import json
 import logging
@@ -24,8 +25,6 @@ if TYPE_CHECKING:
     from ai.attack_graph import ToolCallCollector
 
 import discord
-
-from discord_ui.chunker import send_chunked
 
 log = logging.getLogger(__name__)
 
@@ -351,7 +350,7 @@ async def _run_in_devcontainer(
 HOOK_SCRIPT = str(Path(__file__).parent.parent / "hooks" / "check_feedback.sh")
 MCP_CONFIG = str(Path(__file__).parent.parent / "mcp-config.json")
 
-from ai.playbooks import GHIDRA_CATEGORIES
+from ai.playbooks import GHIDRA_CATEGORIES  # noqa: E402  (late: avoids a circular import)
 
 
 def detect_challenge_binary(challenge_dir: str) -> str | None:
@@ -448,7 +447,11 @@ def _build_mcp_config(category: str | None, challenge_dir: str | None) -> str:
     }
     merged = {"mcpServers": servers}
 
-    tmp = tempfile.NamedTemporaryFile(mode="w", suffix="-mcp.json", delete=False, prefix="ctf_ghidra_")
+    # delete=False on purpose: the path outlives this scope and
+    # is passed to the Claude Code CLI, so a context manager would unlink it early.
+    tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115
+        mode="w", suffix="-mcp.json", delete=False, prefix="ctf_ghidra_"
+    )
     json.dump(merged, tmp, indent=2)
     tmp.close()
 
@@ -459,10 +462,8 @@ def _build_mcp_config(category: str | None, challenge_dir: str | None) -> str:
 def _cleanup_mcp_config(path: str) -> None:
     """Delete temp MCP config file if it's not the static one."""
     if path != MCP_CONFIG:
-        try:
+        with contextlib.suppress(OSError):
             os.unlink(path)
-        except OSError:
-            pass
 
 
 def _build_claude_cmd(
@@ -533,8 +534,9 @@ async def _run_bwrap(
     fast: bool = False,
 ) -> str | None:
     """Run Claude Code in a bwrap sandbox with tmpfs overlay on the challenge dir."""
-    from ai.sandbox import create_bwrap_workspace, build_bwrap_cmd, sync_back_artifacts
     import shutil
+
+    from ai.sandbox import build_bwrap_cmd, create_bwrap_workspace, sync_back_artifacts
 
     challenge_path = Path(challenge_dir).resolve()
     model_label = (model or "unknown").split("/")[-1]
@@ -936,15 +938,14 @@ async def _process_stream(
 
                 # Detect API policy filter and inject reframe guidance
                 recent_text = "".join(full_text[-3:]).lower() if full_text else ""
-                if "usage policy" in recent_text or "unable to respond" in recent_text:
-                    if workspace:
-                        feedback_path = Path(workspace) / "_live_feedback.md"
-                        try:
-                            feedback_path.write_text(AUP_REFRAME_GUIDANCE)
-                            log.warning("API policy filter triggered — wrote reframe guidance")
-                            ship_log("agent.policy_block", **(_labels))
-                        except Exception:
-                            pass
+                if ("usage policy" in recent_text or "unable to respond" in recent_text) and workspace:
+                    feedback_path = Path(workspace) / "_live_feedback.md"
+                    try:
+                        feedback_path.write_text(AUP_REFRAME_GUIDANCE)
+                        log.warning("API policy filter triggered — wrote reframe guidance")
+                        ship_log("agent.policy_block", **(_labels))
+                    except Exception:
+                        pass
 
                 if event_type == "tool_result":
                     content = event.get("content", "")
@@ -989,7 +990,7 @@ async def _process_stream(
 
                 # Progress goes to telemetry/Grafana — no Discord spam
 
-    from ai.flag_events import register, FLAG_GRACE_PERIOD
+    from ai.flag_events import FLAG_GRACE_PERIOD, register
 
     flag_event = None
     if challenge_id is not None:
@@ -1038,10 +1039,8 @@ async def _process_stream(
             else:
                 # Hard timeout, no flag — kill solver
                 reader_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError, Exception):
                     await reader_task
-                except (asyncio.CancelledError, Exception):
-                    pass
                 from ai.sandbox import kill_process_tree
 
                 kill_process_tree(proc)

@@ -4,8 +4,6 @@
 import asyncio
 import json
 
-import pytest
-
 
 def test_no_advice_without_progress(tmp_path):
     """Should return None when no prior attempts exist."""

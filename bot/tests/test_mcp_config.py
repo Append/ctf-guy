@@ -2,7 +2,6 @@
 """Tests for binary detection, MCP config generation, and cleanup."""
 
 import json
-import os
 import stat
 import tempfile
 from pathlib import Path
@@ -85,7 +84,7 @@ def test_build_mcp_config_non_rev_category(challenge_dir, elf_binary, monkeypatc
     """Non-rev/pwn categories should return the static MCP config."""
     monkeypatch.setenv("GHIDRA_MCP_ENABLED", "true")
 
-    from ai.claude_code import _build_mcp_config, MCP_CONFIG
+    from ai.claude_code import MCP_CONFIG, _build_mcp_config
 
     result = _build_mcp_config("crypto", str(challenge_dir))
     assert result == MCP_CONFIG
@@ -95,7 +94,7 @@ def test_build_mcp_config_rev_with_binary(challenge_dir, elf_binary, monkeypatch
     """Rev category with binary and Ghidra enabled should return temp config with ghidra entry."""
     monkeypatch.setenv("GHIDRA_MCP_ENABLED", "true")
 
-    from ai.claude_code import _build_mcp_config, MCP_CONFIG, _cleanup_mcp_config
+    from ai.claude_code import MCP_CONFIG, _build_mcp_config, _cleanup_mcp_config
 
     result = _build_mcp_config("reverse engineering", str(challenge_dir))
     assert result != MCP_CONFIG
@@ -115,7 +114,7 @@ def test_build_mcp_config_pwn_category(challenge_dir, elf_binary, monkeypatch):
     """Pwn category should also get Ghidra MCP."""
     monkeypatch.setenv("GHIDRA_MCP_ENABLED", "true")
 
-    from ai.claude_code import _build_mcp_config, MCP_CONFIG, _cleanup_mcp_config
+    from ai.claude_code import MCP_CONFIG, _build_mcp_config, _cleanup_mcp_config
 
     result = _build_mcp_config("binary exploitation", str(challenge_dir))
     assert result != MCP_CONFIG
@@ -131,7 +130,7 @@ def test_build_mcp_config_rev_no_binary(challenge_dir, monkeypatch):
     monkeypatch.setenv("GHIDRA_MCP_ENABLED", "true")
     (challenge_dir / "solve.py").write_text("print('hello')")
 
-    from ai.claude_code import _build_mcp_config, MCP_CONFIG
+    from ai.claude_code import MCP_CONFIG, _build_mcp_config
 
     result = _build_mcp_config("rev", str(challenge_dir))
     assert result == MCP_CONFIG
@@ -141,7 +140,7 @@ def test_build_mcp_config_disabled(challenge_dir, elf_binary, monkeypatch):
     """Ghidra disabled should return static config even for rev."""
     monkeypatch.delenv("GHIDRA_MCP_ENABLED", raising=False)
 
-    from ai.claude_code import _build_mcp_config, MCP_CONFIG
+    from ai.claude_code import MCP_CONFIG, _build_mcp_config
 
     result = _build_mcp_config("rev", str(challenge_dir))
     assert result == MCP_CONFIG
@@ -149,7 +148,7 @@ def test_build_mcp_config_disabled(challenge_dir, elf_binary, monkeypatch):
 
 def test_build_mcp_config_no_category():
     """None category should return static config."""
-    from ai.claude_code import _build_mcp_config, MCP_CONFIG
+    from ai.claude_code import MCP_CONFIG, _build_mcp_config
 
     result = _build_mcp_config(None, "/some/dir")
     assert result == MCP_CONFIG
@@ -157,7 +156,8 @@ def test_build_mcp_config_no_category():
 
 def test_cleanup_deletes_temp():
     """Temp MCP config should be deleted by cleanup."""
-    tmp = tempfile.NamedTemporaryFile(suffix="-mcp.json", delete=False)
+    # delete=False: this test asserts that cleanup() removes the file
+    tmp = tempfile.NamedTemporaryFile(suffix="-mcp.json", delete=False)  # noqa: SIM115
     tmp.write(b"{}")
     tmp.close()
 
@@ -169,7 +169,7 @@ def test_cleanup_deletes_temp():
 
 def test_cleanup_preserves_static():
     """Static MCP config should NOT be deleted by cleanup."""
-    from ai.claude_code import _cleanup_mcp_config, MCP_CONFIG
+    from ai.claude_code import MCP_CONFIG, _cleanup_mcp_config
 
     # Should be a no-op (doesn't try to delete the static config)
     _cleanup_mcp_config(MCP_CONFIG)

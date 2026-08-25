@@ -5,10 +5,10 @@ uses an LLM to generate a targeted correction, written to _live_feedback.md
 in the workspace for hook-based injection into the running agent."""
 
 import asyncio
-import json
 import logging
 import time
 from pathlib import Path
+from typing import ClassVar
 
 from ai.manager_feed import ManagerFeed
 from ai.playbooks import BRUTE_OK_CATEGORIES, TOOL_CATEGORY_MAP, normalize_category
@@ -163,7 +163,7 @@ class PromptInjectionDetector:
     Blocks immediately without LLM — the next tool call could be destructive.
     """
 
-    CRITICAL_PATTERNS = [
+    CRITICAL_PATTERNS: ClassVar[list] = [
         (r"rm\s+-rf\s+[/~]", "destructive filesystem operation (rm -rf)"),
         (r"bash\s+-i\s+>&\s*/dev/tcp/", "reverse shell attempt"),
         (r"nc\s+-e\s", "reverse shell via netcat"),
@@ -175,7 +175,7 @@ class PromptInjectionDetector:
         (r"php\s+-r\s+.*fsockopen", "PHP reverse shell"),
     ]
 
-    SENSITIVE_FILE_PATTERNS = [
+    SENSITIVE_FILE_PATTERNS: ClassVar[list] = [
         (r"\.env\b", "reading .env file (may contain secrets)"),
         (r"pico_cookies\.json", "reading platform cookies"),
         (r"\.ssh/(id_|authorized_keys|known_hosts)", "accessing SSH keys"),
@@ -184,13 +184,13 @@ class PromptInjectionDetector:
         (r"\.claude/(settings|memory)", "accessing Claude configuration"),
     ]
 
-    EXFIL_PATTERNS = [
+    EXFIL_PATTERNS: ClassVar[list] = [
         (r"curl\s+.*-[dX]\s*POST\s", "POST request (potential data exfiltration)"),
         (r"wget\s+--post", "POST via wget"),
     ]
 
     # Domains that are OK to POST to
-    SAFE_DOMAINS = {
+    SAFE_DOMAINS: ClassVar[dict] = {
         "picoctf",
         "localhost",
         "127.0.0.1",
@@ -247,7 +247,7 @@ class PromptInjectionDetector:
 class InfraStruggleDetector:
     """Detect when solver is fighting infrastructure instead of solving."""
 
-    INFRA_KEYWORDS = [
+    INFRA_KEYWORDS: ClassVar[list] = [
         "ssh_config",
         "StrictHostKeyChecking",
         "nix-shell",
@@ -290,7 +290,7 @@ class InfraStruggleDetector:
 class BruteForceDetector:
     """Detect brute-force attempts when a smarter approach likely exists."""
 
-    BRUTE_KEYWORDS = [
+    BRUTE_KEYWORDS: ClassVar[list] = [
         "wordlist",
         "rockyou",
         "brute",
@@ -335,7 +335,7 @@ class BruteForceDetector:
 class ToolHallucinationDetector:
     """Detect when solver tries to use tools that don't exist."""
 
-    ERROR_PATTERNS = [
+    ERROR_PATTERNS: ClassVar[list] = [
         "command not found",
         "No such file or directory",
         "ModuleNotFoundError",
@@ -344,7 +344,7 @@ class ToolHallucinationDetector:
 
     def check(self, events: list[dict], challenge: dict) -> DetectorResult | None:
         # Check tool_result events for error patterns
-        results = [e for e in events if e["type"] == "tool_result"]
+        [e for e in events if e["type"] == "tool_result"]
         tool_calls = [e for e in events if e["type"] == "tool_call"]
         if len(tool_calls) < 3:
             return None
@@ -370,7 +370,7 @@ class ToolHallucinationDetector:
         if error_count >= 3:
             return DetectorResult(
                 "tool_hallucination",
-                f"Multiple tool/module errors detected — check available tools with `which` before using them",
+                "Multiple tool/module errors detected — check available tools with `which` before using them",
                 context="; ".join(error_tools[:3]),
             )
         return None

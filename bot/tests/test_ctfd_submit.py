@@ -2,10 +2,9 @@
 """Tests for CTFd flag submission."""
 
 import json
-import pytest
-from dataclasses import dataclass
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from ctfd.client import CTFdClient
 from ctfd.types import CTFdSubmissionResult

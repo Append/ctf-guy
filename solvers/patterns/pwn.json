@@ -73,8 +73,9 @@
     "missing_tools": [],
     "points": 100,
     "solved": true,
-    "flag": "picoCTF{\")\n   - `%15$p` = `0x355f31346d316e34` (next 8 bytes)\n   - `%16$p` = `0x3478345f33317937` (next 8 bytes)\n   - `%17$p` = `0x31655f673431665f` (next 8 bytes)\n   - `%18$p` = `0x7d383130386531` (final bytes: \"...e11e8018}",
-    "timestamp": "2026-03-24T00:18:54.923798"
+    "flag": "",
+    "timestamp": "2026-03-24T00:18:54.923798",
+    "notes": "picoCTF{\")\n   - `%15$p` = `0x355f31346d316e34` (next 8 bytes)\n   - `%16$p` = `0x3478345f33317937` (next 8 bytes)\n   - `%17$p` = `0x31655f673431665f` (next 8 bytes)\n   - `%18$p` = `0x7d383130386531` (final bytes: \"...e11e8018}"
   },
   {
     "challenge": "hash",
@@ -685,5 +686,168 @@
     "num_turns": 0,
     "duration_ms": 0,
     "model": "haiku"
+  },
+  {
+    "challenge": "Binary Gauntlet 0",
+    "slug": "binary-gauntlet-0",
+    "pattern": "Overflow a stack buffer to trigger a SIGSEGV handler that prints the flag.",
+    "key_insight": "The SIGSEGV handler *is* the win function. The challenge rewards you for crashing the program.",
+    "approach": "The binary reads the flag into a global buffer (`obj.flag` @ 0x6010e0), registers a SIGSEGV handler that `fprintf`s it to stderr, then takes two inputs:\n\n1. First input: `printf(user_input)` \u2014 format string vuln exists but isn't needed\n2. Second input: `strcpy` from 1000-byte heap buf into `[rbp-0x80]` (128-byte) stack buf \u2014 overflow\n\nNo protections: no NX, no canary, no PIE, executable stack. Just crash it.\n\n1. Send junk for the first `fgets`\n2. Send 200 bytes for the second `fgets` to overflow",
+    "tools": [
+      "pwntools (remote interaction)",
+      "radare2 (static analysis)",
+      "checksec"
+    ],
+    "missing_tools": [],
+    "points": 10,
+    "solved": true,
+    "flag": "",
+    "timestamp": "2026-03-20T22:44:42.488921"
+  },
+  {
+    "challenge": "Binary Gauntlet 1",
+    "slug": "binary-gauntlet-1",
+    "pattern": "ret2shellcode via leaked stack buffer address and strcpy overflow.",
+    "key_insight": "NX disabled + stack address leak = textbook shellcode injection. The `strcpy` constraint means shellcode can't contain null bytes, but pwntools' `shellcraft.sh()` is null-free by default. The null bytes in the upper bytes of the return address are fine since they come last and `strcpy` naturally ter",
+    "approach": "The binary has all protections disabled (NX off, no canary, no PIE, executable stack, RWX segments). The program:\n\n1. Leaks the address of a stack buffer (`dest` at rbp-0x70) via `printf(\"%p\\n\", dest)`\n2. Reads input into a heap buffer, then passes it to `printf()` (format string vuln \u2014 unused)\n3. Reads a second input into heap, then `strcpy(dest, heap_buf)` \u2014 buffer overflow since dest is only 112 bytes but input can be up to 1000\n\nThe overflow offset from `dest` to the saved return address is ",
+    "tools": [
+      "pwntools (shellcode generation, exploit scripting)",
+      "radare2 (disassembly)"
+    ],
+    "missing_tools": [],
+    "points": 30,
+    "solved": true,
+    "flag": "",
+    "timestamp": "2026-03-20T22:57:16.568841"
+  },
+  {
+    "challenge": "Binary Gauntlet 2",
+    "slug": "binary-gauntlet-2",
+    "pattern": "Format string leak to bypass ASLR + ret2shellcode via strcpy overflow.",
+    "key_insight": "ASLR randomizes stack addresses each run, but a format string leak gives you a stack pointer at a known offset from your buffer. One leak defeats ASLR completely.",
+    "approach": "Same binary as Gauntlet 0/1: no NX, no canary, no PIE, RWX stack. The difference from part 1 is that the explicit `printf(\"%p\\n\", dest)` stack address leak is removed \u2014 ASLR now matters.\n\nThe format string vulnerability (`printf(user_input)`) becomes the leak primitive:\n- `%6$p` leaks a stack pointer (argv) at a fixed offset from the dest buffer\n- Remote delta: `leaked - 0x158 = dest_addr`\n\nWith the buffer address recovered, the exploit is identical to part 1:\n1. Send `%6$p` as first input to le",
+    "tools": [
+      "pwntools (shellcode generation, remote interaction)",
+      "radare2 (disassembly from earlier parts)",
+      "checksec"
+    ],
+    "missing_tools": [],
+    "points": 50,
+    "solved": true,
+    "flag": "",
+    "timestamp": "2026-03-23T15:36:13.164294"
+  },
+  {
+    "challenge": "Bizz Fuzz",
+    "slug": "bizz-fuzz",
+    "pattern": "",
+    "key_insight": "The challenge's difficulty comes from **obfuscation through complexity** rather than sophisticated security protections. The vulnerability itself is straightforward (classic buffer overflow), but finding it requires:\n- Understanding the program's control flow through ~80 functions\n- Identifying whic",
+    "approach": "",
+    "tools": [
+      "pwntools** - Exploit development and payload crafting",
+      "checksec** - Binary security analysis",
+      "Ghidra** / **radare2** - Reverse engineering and vulnerability discovery"
+    ],
+    "missing_tools": [],
+    "points": 80,
+    "solved": true,
+    "flag": "picoCTF{y0u_found_m3}",
+    "timestamp": "2026-03-21T23:30:51.478696"
+  },
+  {
+    "challenge": "format string 0",
+    "slug": "format-string-0",
+    "pattern": "Menu-based burger shop where selecting items with `printf` format specifiers triggers a format string vulnerability leading to SIGSEGV and flag disclosure.",
+    "key_insight": "The menu items themselves ARE the exploit payloads \u2014 you just pick the right burger. `Gr%114d_Cheese` pads output to pass a length check, and `Cla%sic_Che%s%steak` crashes via `%s` dereferencing garbage pointers.",
+    "approach": "1. **Recon:** Source code shows two `printf(user_input)` calls with menu items containing format specifiers.\n2. **Stage 1 (Patrick):** Select `Gr%114d_Cheese` \u2014 the `%114d` makes `printf` output 114+ characters, passing the `count > 64` check to unlock `serve_bob()`.\n3. **Stage 2 (Bob):** Select `Cla%sic_Che%s%steak` \u2014 the three `%s` specifiers dereference stack values as string pointers. On the server, this hits an invalid address \u2192 SIGSEGV.\n4. **Flag:** The SIGSEGV handler (`sigsegv_handler`) ",
+    "tools": [
+      "pwntools, source code review"
+    ],
+    "missing_tools": [],
+    "points": 50,
+    "solved": true,
+    "flag": "picoCTF{7h3_cu570m3r_15_n3v3r_SEGFAULT_74f6c0e7}",
+    "timestamp": "2026-03-21T23:04:27.819220"
+  },
+  {
+    "challenge": "heap 0",
+    "slug": "heap-0",
+    "pattern": "Heap buffer overflow to corrupt an adjacent variable",
+    "key_insight": "Heap chunks allocated sequentially are adjacent in memory. Overflowing one corrupts the next, just like stack overflows but on the heap.",
+    "approach": "Source code provided. Two adjacent heap allocations:\n1. `input_data = malloc(5)` \u2014 set to \"pico\"\n2. `safe_var = malloc(5)` \u2014 set to \"bico\"\n\n`write_buffer()` uses `scanf(\"%s\", input_data)` with no size limit. Since `safe_var` is allocated right after `input_data` on the heap (0x20 bytes apart due to malloc metadata/alignment), writing more than 32 bytes overflows into `safe_var`.\n\nWin condition: `safe_var != \"bico\"` \u2014 just needs to be anything else.",
+    "tools": [
+      "checksec, pwntools",
+      "Source code analysis"
+    ],
+    "missing_tools": [],
+    "points": 50,
+    "solved": true,
+    "flag": "picoCTF{my_first_heap_overflow_e4c92a78}",
+    "timestamp": "2026-03-23T15:12:10.200611"
+  },
+  {
+    "challenge": "Here's a LIBC",
+    "slug": "heres-a-libc",
+    "pattern": "A classic return-to-libc (ret2libc) exploitation challenge with buffer overflow vulnerability in a 64-bit binary protected by NX. The binary leaks libc addresses through `puts()`, allowing calculation",
+    "key_insight": "1. **Offset calculation**: The exact offset (136 bytes) must be found through fuzzing or debugging\n2. **Gadget selection**: Need `pop rdi; ret` to pass first argument in x64 calling convention\n3. **Stack alignment**: x64 requires RSP to be 16-byte aligned before call; the extra `ret` fixes this\n4. *",
+    "approach": "",
+    "tools": [
+      "pwntools**: ROP chain construction, ELF parsing, process interaction",
+      "gdb**: Dynamic debugging to find offset and gadgets",
+      "readelf**: Extract symbol offsets from libc",
+      "checksec**: Identify enabled protections"
+    ],
+    "missing_tools": [],
+    "points": 90,
+    "solved": true,
+    "flag": "picoCTF{1_l0v3_sm4sh_st4cking_92a0127edb190681}",
+    "timestamp": "2026-03-23T17:25:55.310255"
+  },
+  {
+    "challenge": "Quizploit",
+    "slug": "quizploit",
+    "pattern": "Answer 13 quiz questions about a vulnerable binary to get the flag. No actual exploitation required.",
+    "key_insight": "Despite being categorized as \"Binary Exploitation,\" this is purely a knowledge quiz. The binary/source are just reference material for answering questions \u2014 no exploit payload is needed.",
+    "approach": "The challenge provides a binary (`vuln`) and source (`vuln.c`) as reference material. Connecting to the remote service presents a 13-question quiz about the binary's properties and vulnerabilities. Answers come from running `file`, `checksec`, reading the source, and understanding basic exploitation concepts.",
+    "tools": [
+      "checksec, file, readelf, objdump",
+      "pwntools (for remote connection)"
+    ],
+    "missing_tools": [],
+    "points": 50,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-03-23T15:33:35.753588"
+  },
+  {
+    "challenge": "Stonks",
+    "slug": "stonks",
+    "pattern": "Format string vulnerability leaks the flag from the stack.",
+    "key_insight": "The flag is a local variable on the stack in the same function as the vulnerable `printf`. No need for arbitrary read/write \u2014 just dump the stack with `%x` and decode the hex as little-endian ASCII.",
+    "approach": "The source code (`vuln.c`) reads the flag into a stack buffer `api_buf` in `buy_stonks()`, then passes user input directly to `printf(user_buf)` \u2014 a textbook format string bug. Sending `%x.` repeated 60 times dumps stack contents as hex, which includes the flag bytes in little-endian 32-bit words.",
+    "tools": [
+      "pwntools (remote connection)",
+      "Python (hex decoding)"
+    ],
+    "missing_tools": [],
+    "points": 20,
+    "solved": true,
+    "flag": "picoCTF{I_l05t_4ll_my_m0n3y_b74ad137}",
+    "timestamp": "2026-03-20T23:07:29.303988"
+  },
+  {
+    "challenge": "What's your input?",
+    "slug": "whats-your-input",
+    "pattern": "",
+    "key_insight": "Python 2 `input()` = `eval(raw_input())`. Sending a variable name returns its value.",
+    "approach": "1. First prompt: send `city` \u2014 leaks the random city name (not needed, but harmless)\n2. Second prompt: send `city` \u2014 `input()` evals it to the `city` variable, which equals itself \u2192 flag",
+    "tools": [
+      "pwntools (remote connection)"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{v4lua4bl3_1npu7_2979cd2e}",
+    "timestamp": "2026-03-23T21:08:49.972855"
   }
 ]

@@ -12,6 +12,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from ai.playbooks import normalize_category
+
 log = logging.getLogger(__name__)
 
 
@@ -49,7 +51,7 @@ def scan_and_build_patterns(ctf_root: Path) -> dict[str, int]:
     # Write pattern files
     counts = {}
     for category, patterns in by_category.items():
-        pattern_file = patterns_dir / f"{category}.json"
+        pattern_file = patterns_dir / f"{normalize_category(category)}.json"
         pattern_file.write_text(json.dumps(patterns, indent=2))
         counts[category] = len(patterns)
         log.info(f"Patterns: {category} — {len(patterns)} entries")
@@ -143,7 +145,7 @@ def learn_from_challenge(
     # Update the category pattern file
     patterns_dir = ctf_root / "solvers" / "patterns"
     patterns_dir.mkdir(parents=True, exist_ok=True)
-    pattern_file = patterns_dir / f"{category}.json"
+    pattern_file = patterns_dir / f"{normalize_category(category)}.json"
 
     existing = []
     if pattern_file.exists():
@@ -168,8 +170,9 @@ def get_patterns_context(category: str, ctf_root: Path) -> str:
     """Load learned patterns for a category to inject into solver prompts."""
     patterns_dir = ctf_root / "solvers" / "patterns"
 
-    # Try exact match and common variations
-    for name in [category.lower(), category]:
+    # Canonical name first; the bare spellings are legacy files from before
+    # normalize_category() was applied to the filename.
+    for name in [normalize_category(category), category.lower(), category]:
         patterns_file = patterns_dir / f"{name}.json"
         if patterns_file.exists():
             break

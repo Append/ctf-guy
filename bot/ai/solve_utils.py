@@ -153,7 +153,7 @@ async def try_auto_submit(
             result = await pico.submit_flag(challenge.ctfd_id, flag)
             await pico.close()
             flag_tracker.record(challenge.ctfd_id, flag, result.status)
-            from ai.telemetry import ship_metric, ship_log
+            from ai.telemetry import ship_log, ship_metric
 
             ship_metric(
                 "ctf_flag_submissions_total",
@@ -214,7 +214,7 @@ async def try_auto_submit(
             return False
 
         flag_tracker.record(challenge.ctfd_id, flag, result.status)
-        from ai.telemetry import ship_metric, ship_log
+        from ai.telemetry import ship_log, ship_metric
 
         ship_metric(
             "ctf_flag_submissions_total",
@@ -430,14 +430,14 @@ def build_solve_prompt(
         "yes",
     ):
         prompt += (
-            f"\n\nGHIDRA DECOMPILATION — MCP TOOLS AVAILABLE:\n"
-            f"You have Ghidra MCP tools. Use them for decompilation:\n"
-            f"- `decompile_function` — C pseudocode by name or address\n"
-            f"- `search_symbols_by_name` — find functions/globals\n"
-            f"- `search_code` — semantic search across decompiled code\n"
-            f"- `list_imports` / `list_exports` — binary interfaces\n"
-            f"- `list_cross_references` — xrefs to/from functions\n"
-            f"\nPrefer Ghidra decompilation for understanding logic. Use gdb/r2 for dynamic analysis.\n"
+            "\n\nGHIDRA DECOMPILATION — MCP TOOLS AVAILABLE:\n"
+            "You have Ghidra MCP tools. Use them for decompilation:\n"
+            "- `decompile_function` — C pseudocode by name or address\n"
+            "- `search_symbols_by_name` — find functions/globals\n"
+            "- `search_code` — semantic search across decompiled code\n"
+            "- `list_imports` / `list_exports` — binary interfaces\n"
+            "- `list_cross_references` — xrefs to/from functions\n"
+            "\nPrefer Ghidra decompilation for understanding logic. Use gdb/r2 for dynamic analysis.\n"
         )
 
     # Inject previous attempt context if exists
@@ -618,7 +618,7 @@ async def _launch_via_playwright(challenge_id: int) -> dict | None:
     """
     try:
         from playwright.async_api import async_playwright
-        from ai.sandbox import create_bwrap_workspace
+
 
         cookies_file = Path(__file__).parent.parent / "data" / "pico_cookies.json"
         if not cookies_file.exists():
@@ -813,6 +813,7 @@ def write_submit_script(
     platform: str,
     submit_url: str = "http://localhost:8080",
     solver_id: str = "",
+    token: str = "",
 ) -> None:
     """Write a _submit_flag.py script to the challenge directory.
 
@@ -839,7 +840,10 @@ def main():
 
     import urllib.request
     body = json.dumps({{"challenge_id": challenge_id, "flag": flag, "platform": platform, "solver_id": "{solver_id}"}}).encode()
-    req = urllib.request.Request(submit_url, data=body, headers={{"Content-Type": "application/json"}})
+    headers = {{"Content-Type": "application/json"}}
+    if "{token}":
+        headers["Authorization"] = "Bearer " + "{token}"
+    req = urllib.request.Request(submit_url, data=body, headers=headers)
     try:
         resp = urllib.request.urlopen(req, timeout=15)
         data = json.loads(resp.read().decode())
@@ -867,6 +871,7 @@ def write_restart_script(
     challenge_dir: str,
     challenge_id: int,
     restart_url: str = "http://localhost:8080",
+    token: str = "",
 ) -> None:
     """Write a _restart_instance.py script to the challenge directory.
 
@@ -886,7 +891,10 @@ def main():
 
     import urllib.request
     body = json.dumps({{"challenge_id": challenge_id, "challenge_dir": challenge_dir}}).encode()
-    req = urllib.request.Request(url, data=body, headers={{"Content-Type": "application/json"}})
+    headers = {{"Content-Type": "application/json"}}
+    if "{token}":
+        headers["Authorization"] = "Bearer " + "{token}"
+    req = urllib.request.Request(url, data=body, headers=headers)
     try:
         resp = urllib.request.urlopen(req, timeout=60)
         data = json.loads(resp.read().decode())

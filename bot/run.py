@@ -2,8 +2,11 @@
 """CTF Bot entry point."""
 
 import asyncio
+import contextlib
+import hmac
 import logging
 import os
+import secrets
 import signal
 import sys
 from pathlib import Path
@@ -64,7 +67,23 @@ class CTFBot(commands.Bot):
         if self.config.file_server_port:
             from aiohttp import web
 
-            app = web.Application()
+            # Per-run bearer token. /submit and /restart-instance act on the
+            # competition account, and the static tree exposes challenge files
+            # and flags, so every route requires it.
+            self.file_server_token = secrets.token_urlsafe(32)
+            _token = self.file_server_token
+
+            @web.middleware
+            async def require_token(request, handler):
+                supplied = request.query.get("t", "")
+                auth = request.headers.get("Authorization", "")
+                if auth.startswith("Bearer "):
+                    supplied = auth[7:]
+                if not hmac.compare_digest(supplied, _token):
+                    return web.json_response({"error": "unauthorized"}, status=401)
+                return await handler(request)
+
+            app = web.Application(middlewares=[require_token])
             app["bot"] = self
 
             async def handle_submit(request):
@@ -139,10 +158,14 @@ class CTFBot(commands.Bot):
             app.router.add_post("/restart-instance", handle_restart_instance)
             challenges_dir = self.config.ctf_root / "challenges"
             challenges_dir.mkdir(parents=True, exist_ok=True)
-            app.router.add_static("/", challenges_dir, show_index=True)
+            # show_index=False: the challenges tree holds flag.txt and solve
+            # artifacts, so browsing it must not be possible even with the token.
+            app.router.add_static("/", challenges_dir, show_index=False)
             runner = web.AppRunner(app)
             await runner.setup()
-            site = web.TCPSite(runner, "0.0.0.0", self.config.file_server_port, reuse_address=True)
+            site = web.TCPSite(
+                runner, self.config.file_server_bind, self.config.file_server_port, reuse_address=True
+            )
             await site.start()
             self._file_server_runner = runner
 
@@ -155,9 +178,13 @@ class CTFBot(commands.Bot):
 
                 host = _get_host()
             self.file_server_base_url = f"http://{host}:{self.config.file_server_port}"
-            log.info(f"File server started at {self.file_server_base_url}")
+            log.info(
+                f"File server started at {self.file_server_base_url} "
+                f"(bind={self.config.file_server_bind}, token={self.file_server_token})"
+            )
         else:
             self.file_server_base_url = ""
+            self.file_server_token = ""
 
         # Initialize telemetry
         from ai.telemetry import init_telemetry, install_log_handler
@@ -216,10 +243,8 @@ class CTFBot(commands.Bot):
         # Stop sysmon
         if hasattr(self, "_sysmon_task") and self._sysmon_task:
             self._sysmon_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
                 await self._sysmon_task
-            except (asyncio.CancelledError, Exception):
-                pass
 
         # Stop file server
         if hasattr(self, "_file_server_runner") and self._file_server_runner:

@@ -50,7 +50,7 @@ async def generate_retry_advice(
     if trace_file.exists():
         try:
             lines = trace_file.read_text().strip().split("\n")
-            events = [json.loads(l) for l in lines[-20:] if l.strip()]
+            events = [json.loads(line) for line in lines[-20:] if line.strip()]
             trace_summary = []
             for e in events:
                 etype = e.get("type", "?")
@@ -64,7 +64,7 @@ async def generate_retry_advice(
                 elif etype == "failure_analysis":
                     trace_summary.append(f"- Analysis: {e.get('analysis', '')[:200]}")
             if trace_summary:
-                context_parts.append(f"## Attempt history:\n" + "\n".join(trace_summary))
+                context_parts.append("## Attempt history:\n" + "\n".join(trace_summary))
         except Exception:
             pass
 
@@ -94,7 +94,7 @@ async def generate_retry_advice(
                         f"- UNEXPLORED ({u.get('priority', '?')}): {u['approach']} — {u.get('rationale', '')}"
                     )
             if graph_summary:
-                context_parts.append(f"## Attack graph analysis:\n" + "\n".join(graph_summary))
+                context_parts.append("## Attack graph analysis:\n" + "\n".join(graph_summary))
         except Exception:
             pass
 

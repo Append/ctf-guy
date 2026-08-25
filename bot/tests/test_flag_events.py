@@ -2,16 +2,17 @@
 """Tests for ai/flag_events.py — flag confirmation event registry."""
 
 import asyncio
+import dataclasses
 
 import pytest
 
 from ai.flag_events import (
-    register,
-    notify,
-    unregister,
-    get_result,
-    FlagResult,
     FLAG_GRACE_PERIOD,
+    FlagResult,
+    get_result,
+    notify,
+    register,
+    unregister,
 )
 
 
@@ -95,8 +96,9 @@ class TestNotify:
             await asyncio.sleep(0.05)
             notify(500, flag="kernel{async}", solver_id="solver-x", model="sonnet")
 
-        asyncio.create_task(delayed_notify())
+        task = asyncio.create_task(delayed_notify())
         await asyncio.wait_for(event.wait(), timeout=1.0)
+        await task
         assert event.is_set()
         result = get_result(500)
         assert result is not None
@@ -125,7 +127,7 @@ class TestGetResult:
 class TestFlagResult:
     def test_flag_result_is_frozen(self):
         result = FlagResult(flag="kernel{x}", solver_id="s", model="m")
-        with pytest.raises(Exception):
+        with pytest.raises(dataclasses.FrozenInstanceError):
             result.flag = "kernel{y}"  # type: ignore[misc]
 
     def test_flag_result_defaults(self):

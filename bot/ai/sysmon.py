@@ -4,7 +4,6 @@
 import asyncio
 import logging
 import os
-import time
 
 log = logging.getLogger(__name__)
 
@@ -66,11 +65,10 @@ def _ship_metrics(ship_metric):
     # --- Process counts ---
     try:
         # Count our solver subprocesses
-        our_pid = os.getpid()
+        os.getpid()
         bwrap_count = 0
         claude_count = 0
         codex_count = 0
-        total_children = 0
 
         for pid_dir in os.listdir("/proc"):
             if not pid_dir.isdigit():

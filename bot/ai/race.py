@@ -7,6 +7,7 @@ findings.jsonl in the challenge directory.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -18,6 +19,20 @@ from ai.claude_code import SolveResult, _safe_send
 from ai.manager import SolveManager
 from ai.manager_feed import ManagerFeed
 from config import Config
+
+_background_tasks: set[asyncio.Task] = set()
+
+
+def _spawn(coro) -> asyncio.Task:
+    """Fire-and-forget a coroutine while holding a strong reference.
+
+    asyncio keeps only weak references to tasks, so a bare create_task() can be
+    garbage-collected mid-flight and silently never finish.
+    """
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return task
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +67,7 @@ async def race_solvers(
         SolveResult from the winning solver, or None if all fail.
     """
     challenge_path = Path(challenge_dir).resolve()
-    race_start_time = time.time()
+    time.time()
     solver_names = list(models)
     if config.codex_enabled:
         solver_names.append("codex")
@@ -169,7 +184,7 @@ async def race_solvers(
                 if task is flag_sentinel:
                     continue
                 try:
-                    result = task.result()
+                    task.result()
                 except Exception:
                     continue
 
@@ -191,10 +206,8 @@ async def race_solvers(
                             winner_task = tasks[winner_idx]
                             winning_model = solver_names[winner_idx]
                             if winner_task.done() and not winner_task.cancelled():
-                                try:
+                                with contextlib.suppress(Exception):
                                     winner_result = winner_task.result()
-                                except Exception:
-                                    pass
                     except (ValueError, IndexError):
                         pass
 
@@ -280,10 +293,8 @@ async def _run_with_manager(
         return await racer_coro
     finally:
         mgr_task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError, Exception):
             await mgr_task
-        except (asyncio.CancelledError, Exception):
-            pass
 
 
 async def _run_racer(
@@ -310,8 +321,8 @@ async def _run_racer(
 
         # Use bwrap for real isolation — each racer gets its own tmpfs overlay
         # on the challenge dir. Solver sees real paths but writes go to overlay.
-        from ai.claude_code import _run_bwrap, _build_mcp_config, _cleanup_mcp_config
         from ai.attack_graph import ToolCallCollector
+        from ai.claude_code import _build_mcp_config, _cleanup_mcp_config, _run_bwrap
 
         tool_collector = ToolCallCollector()
         mcp_config = _build_mcp_config(category, str(real_challenge_dir))
@@ -365,7 +376,7 @@ async def _run_racer(
                         chall_points = _meta.get("points", 0)
                     except Exception:
                         pass
-                asyncio.create_task(
+                _spawn(
                     generate_attack_graph(
                         challenge_dir=str(real_challenge_dir),
                         solver_output=result.output,

@@ -2,6 +2,7 @@
 """Auto-solve queue — dispatches concurrent Claude Code solvers."""
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
@@ -151,10 +152,8 @@ class SolveQueue:
         # Stop monitor task
         if self._monitor_task and not self._monitor_task.done():
             self._monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
                 await self._monitor_task
-            except (asyncio.CancelledError, Exception):
-                pass
             self._monitor_task = None
 
         # Drain the queue
@@ -469,18 +468,21 @@ class SolveQueue:
         platform = "picoctf" if is_pico else "ctfd"
         if challenge.challenge_dir:
             submit_url = getattr(self.bot, "file_server_base_url", "http://localhost:8080")
+            token = getattr(self.bot, "file_server_token", "")
             write_submit_script(
                 challenge.challenge_dir,
                 challenge.ctfd_id,
                 platform,
                 submit_url=submit_url,
                 solver_id="queue",
+                token=token,
             )
             if platform == "picoctf":
                 write_restart_script(
                     challenge.challenge_dir,
                     challenge.ctfd_id,
                     restart_url=submit_url,
+                    token=token,
                 )
 
         # Update challenge.json with fresh description
@@ -530,8 +532,8 @@ class SolveQueue:
 
         if self.deep_mode:
             from ai.deep_solve import deep_solve
-            from ai.manager_feed import ManagerFeed
             from ai.manager import SolveManager
+            from ai.manager_feed import ManagerFeed
 
             log.info(
                 f"Deep solving {challenge.name} "
@@ -550,10 +552,8 @@ class SolveQueue:
             if challenge.challenge_dir:
                 cj = Path(challenge.challenge_dir) / "challenge.json"
                 if cj.exists():
-                    try:
+                    with contextlib.suppress(Exception):
                         challenge_meta["files"] = json.loads(cj.read_text()).get("files", [])
-                    except Exception:
-                        pass
             mgr = SolveManager(cfg, corrections_enabled=self.corrections_enabled)
             mgr_task = asyncio.create_task(
                 mgr.monitor(
@@ -583,10 +583,8 @@ class SolveQueue:
                 )
             finally:
                 mgr_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError, Exception):
                     await mgr_task
-                except (asyncio.CancelledError, Exception):
-                    pass
         elif self.race_mode:
             from ai.race import race_solvers
 
@@ -612,8 +610,8 @@ class SolveQueue:
             )
 
             # Start manager for this solve
-            from ai.manager_feed import ManagerFeed
             from ai.manager import SolveManager
+            from ai.manager_feed import ManagerFeed
 
             feed = ManagerFeed()
             challenge_meta = {
@@ -627,10 +625,8 @@ class SolveQueue:
             if challenge.challenge_dir:
                 cj = Path(challenge.challenge_dir) / "challenge.json"
                 if cj.exists():
-                    try:
+                    with contextlib.suppress(Exception):
                         challenge_meta["files"] = json.loads(cj.read_text()).get("files", [])
-                    except Exception:
-                        pass
             mgr = SolveManager(cfg, corrections_enabled=self.corrections_enabled)
             mgr_task = asyncio.create_task(
                 mgr.monitor(
@@ -671,14 +667,13 @@ class SolveQueue:
                     )
             finally:
                 mgr_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError, Exception):
                     await mgr_task
-                except (asyncio.CancelledError, Exception):
-                    pass
 
         # Check flag status — prefer flag event (authoritative), fall back to flag.txt
         # Read and stash result THEN unregister — race loop left it for us to read
-        from ai.flag_events import get_result as _get_flag_result, unregister as _unregister_flag
+        from ai.flag_events import get_result as _get_flag_result
+        from ai.flag_events import unregister as _unregister_flag
 
         flag_result = _get_flag_result(challenge.ctfd_id) if challenge.ctfd_id else None
         if challenge.ctfd_id:
@@ -918,7 +913,7 @@ class SolveQueue:
         embed.set_footer(text="Updates every 15s | /autosolve status for details")
 
         # Ship queue metrics to VictoriaMetrics
-        from ai.telemetry import ship_metric, ship_log
+        from ai.telemetry import ship_metric
 
         ship_metric("ctf_queue_depth", float(solving), status="solving")
         ship_metric("ctf_queue_depth", float(queued), status="queued")

@@ -5,7 +5,7 @@ import asyncio
 
 import pytest
 
-from ai.flag_events import register, notify, get_result, unregister, FlagResult
+from ai.flag_events import get_result, notify, register, unregister
 
 
 class TestRaceWinnerIdentification:
@@ -36,8 +36,9 @@ class TestRaceWinnerIdentification:
             await asyncio.sleep(0.05)
             notify(1002, flag="picoCTF{delayed}", solver_id="3", model="codex")
 
-        asyncio.create_task(delayed_submit())
+        task = asyncio.create_task(delayed_submit())
         await asyncio.wait_for(event.wait(), timeout=1.0)
+        await task
         result = get_result(1002)
         assert result.solver_id == "3"
         assert result.model == "codex"

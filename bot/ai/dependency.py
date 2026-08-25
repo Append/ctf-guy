@@ -54,7 +54,7 @@ def _regex_detect_series(challenges: list[ChallengeRecord]) -> dict[int, list[in
             base_name, part_num = result
             series_groups.setdefault(base_name, []).append((part_num, c.id, c))
 
-    for base_name, parts in series_groups.items():
+    for _base_name, parts in series_groups.items():
         if len(parts) < 2:
             continue
         parts.sort(key=lambda x: x[0])

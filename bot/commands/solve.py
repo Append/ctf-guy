@@ -2,6 +2,7 @@
 """Solve command — trigger AI solving in a challenge thread."""
 
 import asyncio
+import contextlib
 import json
 import logging
 from pathlib import Path
@@ -25,6 +26,20 @@ from ai.solve_utils import (
 )
 from db.challenges import get_by_thread
 from discord_ui.threads import update_thread_status
+
+_background_tasks: set[asyncio.Task] = set()
+
+
+def _spawn(coro) -> asyncio.Task:
+    """Fire-and-forget a coroutine while holding a strong reference.
+
+    asyncio keeps only weak references to tasks, so a bare create_task() can be
+    garbage-collected mid-flight and silently never finish.
+    """
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return task
 
 log = logging.getLogger(__name__)
 
@@ -156,18 +171,21 @@ class SolveCog(commands.Cog):
         platform = detect_platform(challenge.challenge_dir)
         if challenge.challenge_dir:
             submit_url = getattr(self.bot, "file_server_base_url", "http://localhost:8080")
+            token = getattr(self.bot, "file_server_token", "")
             write_submit_script(
                 challenge.challenge_dir,
                 challenge.ctfd_id,
                 platform,
                 submit_url=submit_url,
                 solver_id=model or "solve",
+                token=token,
             )
             if platform == "picoctf":
                 write_restart_script(
                     challenge.challenge_dir,
                     challenge.ctfd_id,
                     restart_url=submit_url,
+                    token=token,
                 )
 
         # Default model/effort from config if not specified
@@ -210,8 +228,8 @@ class SolveCog(commands.Cog):
 
             if deep:
                 from ai.deep_solve import deep_solve
-                from ai.manager_feed import ManagerFeed
                 from ai.manager import SolveManager
+                from ai.manager_feed import ManagerFeed
 
                 feed = ManagerFeed()
                 challenge_meta = {
@@ -225,10 +243,8 @@ class SolveCog(commands.Cog):
                 if challenge.challenge_dir:
                     cj = Path(challenge.challenge_dir) / "challenge.json"
                     if cj.exists():
-                        try:
+                        with contextlib.suppress(Exception):
                             challenge_meta["files"] = json.loads(cj.read_text()).get("files", [])
-                        except Exception:
-                            pass
                 mgr = SolveManager(self.bot.config, corrections_enabled=corrections_enabled)
                 mgr_task = asyncio.create_task(
                     mgr.monitor(
@@ -258,10 +274,8 @@ class SolveCog(commands.Cog):
                     )
                 finally:
                     mgr_task.cancel()
-                    try:
+                    with contextlib.suppress(asyncio.CancelledError, Exception):
                         await mgr_task
-                    except (asyncio.CancelledError, Exception):
-                        pass
             elif race:
                 # Race multiple models
                 from ai.race import race_solvers
@@ -281,8 +295,8 @@ class SolveCog(commands.Cog):
                 )
             else:
                 # Single solver
-                from ai.manager_feed import ManagerFeed
                 from ai.manager import SolveManager
+                from ai.manager_feed import ManagerFeed
 
                 feed = ManagerFeed()
                 challenge_meta = {
@@ -296,10 +310,8 @@ class SolveCog(commands.Cog):
                 if challenge.challenge_dir:
                     cj = Path(challenge.challenge_dir) / "challenge.json"
                     if cj.exists():
-                        try:
+                        with contextlib.suppress(Exception):
                             challenge_meta["files"] = json.loads(cj.read_text()).get("files", [])
-                        except Exception:
-                            pass
                 mgr = SolveManager(self.bot.config, corrections_enabled=corrections_enabled)
                 mgr_task = asyncio.create_task(
                     mgr.monitor(
@@ -341,14 +353,13 @@ class SolveCog(commands.Cog):
                         )
                 finally:
                     mgr_task.cancel()
-                    try:
+                    with contextlib.suppress(asyncio.CancelledError, Exception):
                         await mgr_task
-                    except (asyncio.CancelledError, Exception):
-                        pass
 
             # Write progress file with cost data
             # Read flag result then unregister — _process_stream left it for us in race mode
-            from ai.flag_events import get_result as _get_flag_result, unregister as _unregister_flag
+            from ai.flag_events import get_result as _get_flag_result
+            from ai.flag_events import unregister as _unregister_flag
 
             flag_result = _get_flag_result(challenge.ctfd_id) if challenge.ctfd_id else None
             if challenge.ctfd_id:
@@ -375,7 +386,7 @@ class SolveCog(commands.Cog):
                 if result.tool_collector and result.tool_collector.nodes:
                     from ai.attack_graph import generate_attack_graph
 
-                    asyncio.create_task(
+                    _spawn(
                         generate_attack_graph(
                             challenge_dir=challenge.challenge_dir or ".",
                             solver_output=result.output,
@@ -394,7 +405,8 @@ class SolveCog(commands.Cog):
                         )
                     )
 
-            from ai.telemetry import ship_log as _ship_log, ship_metric as _ship_metric
+            from ai.telemetry import ship_log as _ship_log
+            from ai.telemetry import ship_metric as _ship_metric
 
             if flag_found:
                 if flag_result:
@@ -536,10 +548,7 @@ class SolveCog(commands.Cog):
         return "\n".join(parts)
 
     def _is_authorized(self, interaction: discord.Interaction) -> bool:
-        allowed = self.bot.config.allowed_user_ids
-        if not allowed:
-            return True
-        return interaction.user.id in allowed
+        return self.bot.config.is_user_allowed(interaction.user.id)
 
 
 async def setup(bot: commands.Bot):

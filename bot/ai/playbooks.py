@@ -101,8 +101,16 @@ CATEGORY_COLORS = {
 
 
 def normalize_category(category: str) -> str:
-    """Normalize a category name to its canonical form."""
-    return CATEGORY_MAP.get(category.lower(), "misc")
+    """Normalize a category name to its canonical form.
+
+    Separators are folded before lookup: challenge directories are hyphen-
+    slugified ("web-exploitation") while CATEGORY_MAP is keyed on the spaced
+    platform names ("web exploitation"). Without this, every hyphenated
+    category silently fell through to "misc".
+    """
+    key = category.lower().strip().replace("-", " ").replace("_", " ")
+    key = " ".join(key.split())
+    return CATEGORY_MAP.get(key, "misc")
 
 
 def load_playbook(category: str, ctf_root: Path) -> str:

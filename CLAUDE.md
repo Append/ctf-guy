@@ -167,6 +167,13 @@ Links included in challenge thread embeds.
 - `try_auto_submit` accepts optional `config` param for CTFd credentials — callers in `solve.py` and `queue.py` pass `self.bot.config`
 - Secret scanning is scoped by `.titusignore` (`.github/workflows/secret-scan.yml`). Solver output — `challenges/`, `archive/`, `solvers/patterns/`, `findings.jsonl` — is deliberately excluded: it is expected to contain exploit code, challenge credentials, and flags, and scanning it produced 1104 findings vs 3 for the authored tree. `deploy/` and `scripts/` stay in scope; both real secrets found during release prep lived there, not in `bot/`. `titus --ignore` REPLACES its built-in defaults, so build/vendor noise must be listed in `.titusignore` explicitly.
 - Local scan: `titus scan . --ignore .titusignore --validate`. Expect 3 findings from `bot/.env` (real, gitignored, cannot leak). CI sees 0 — `.env` is never checked out.
+- The challenge file server binds `FILE_SERVER_BIND` (default `127.0.0.1`) and requires a per-run bearer token on EVERY route including static files. Token is generated in `run.py`, exposed as `bot.file_server_token`, logged at startup. Solver scripts get it via `write_submit_script(token=...)`/`write_restart_script(token=...)`; Discord file links get `?t=<token>`. New callers must thread it through or requests 401.
+- `show_index=False` on the static route is deliberate — `challenges/` holds `flag.txt` and solve artifacts.
+- Authorization fails closed: `Config.from_env()` raises unless `ALLOWED_USER_IDS` is set or `ALLOW_ALL_USERS=true`. All cogs call `config.is_user_allowed()` — never reimplement the check inline.
+- `normalize_category()` folds `-`/`_` to spaces before the `CATEGORY_MAP` lookup. Before this, hyphen-slugified directory names (`web-exploitation`) silently normalized to `misc`, which forked the pattern corpus into parallel spaced/hyphenated files.
+- `learner.py` writes pattern files under `normalize_category(category)` — canonical names only (`crypto/forensics/misc/pwn/rev/web`). Don't reintroduce raw-category filenames.
+- `pyghidra-mcp` is an optional extra (`uv sync --extra ghidra`), not a default dep — it is spawned out-of-process via `uvx` and drags in chromadb, which has unfixed advisories.
+- Telemetry stack binds `127.0.0.1` only and requires `GRAFANA_ADMIN_PASSWORD`; Grafana anonymous access is off.
 
 ## Key Configuration (.env)
 

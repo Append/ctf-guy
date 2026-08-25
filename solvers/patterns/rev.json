@@ -24,5 +24,1398 @@
     "solved": true,
     "flag": "picoCTF{fr1da_f0r_b1n_in5trum3nt4tion!_b21aef39}",
     "timestamp": "2026-02-28T02:59:38.233770"
+  },
+  {
+    "challenge": "Shop",
+    "slug": "shop",
+    "pattern": "A reverse engineering challenge featuring a shopping program with an integer overflow vulnerability that allows buying items with negative quantities, effectively adding coins instead of subtracting t",
+    "key_insight": "",
+    "approach": "",
+    "tools": [
+      "pwn` (pwntools) - Program interaction",
+      "Python regex - ASCII value parsing"
+    ],
+    "missing_tools": [],
+    "points": 50,
+    "solved": true,
+    "flag": "picoCTF{b4d_br0grammer_b8d72271f}",
+    "timestamp": "2026-03-21T23:25:32.361538"
+  },
+  {
+    "challenge": "ARMssembly 1",
+    "slug": "armssembly-1",
+    "pattern": "ARM64 assembly that takes an argument and prints \"You win\\!\" if the argument makes a function return 0.",
+    "key_insight": "Following ARM64 calling conventions (w0 is the first argument, return in w0) and tracing the arithmetic operations reveals that the function is simply computing a fixed value (469) and subtracting the input argument from it. Solving for when the result is 0 gives us the answer.",
+    "approach": "Read the assembly and trace through the `func` function:\n\n1. The function allocates stack space and sets up constants: 88, 4, and 3\n2. Computes: `temp = 88 << 4` \u2192 88 \u00d7 16 = 1408\n3. Divides: `temp = 1408 / 3` \u2192 469 (integer division)\n4. Returns: `469 - argument`\n\nFor `func` to return 0, we need `469 - argument = 0`, so `argument = 469`.\n\nConvert 469 to 32-bit hex (lowercase): `0x000001d5`",
+    "tools": [
+      "Instruction-level reading and arithmetic tracing"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{000001d5}",
+    "timestamp": "2026-03-21T23:43:13.058341"
+  },
+  {
+    "challenge": "Flag Hunters",
+    "slug": "flag-hunters",
+    "pattern": "A Python reverse engineering challenge where a lyric reader program hides a flag in a \"secret_intro\" section that isn't printed by default. The solution involves understanding the program's control fl",
+    "key_insight": "1. **Program structure matters**: Understanding that the reader starts at `[VERSE1]` reveals why `secret_intro` is hidden\n2. **The flag is embedded**: The challenge doesn't require breaking crypto or exploits - just understanding program flow\n3. **Lyric/subroutine analogy**: The verses and refrains ",
+    "approach": "### Step 1: Analyze the Source Code\nDownloaded and examined `lyric-reader.py`. Key observations:\n- The program reads a `flag.txt` file and embeds it in `secret_intro`\n- `secret_intro` contains: \"Pico warriors rising... The ether's ours to conquer, [FLAG]\"\n- The `reader()` function starts printing from `[VERSE1]` label, skipping the secret_intro\n- The reader function is a simple interpreter supporting labels, REFRAIN/RETURN (like function calls), and other keywords\n\n### Step 2: Identify the Hidde",
+    "tools": [
+      "Python 3 (analyzing/executing the lyric reader)",
+      "Text editor (understanding source structure)"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{flag_hunters}",
+    "timestamp": "2026-03-21T23:29:56.613688"
+  },
+  {
+    "challenge": "Hidden Cipher 1",
+    "slug": "hidden-cipher-1",
+    "pattern": "UPX-packed binary XOR-encrypts flag.txt with a repeating key and outputs hex.",
+    "key_insight": "No need to reverse the binary at all. The known flag format `picoCTF{` provides enough known plaintext to recover the XOR key via known-plaintext attack.",
+    "approach": "1. Connected to the netcat service which outputs the encrypted flag as hex.\n2. Used known-plaintext attack: XOR the ciphertext with the known flag prefix `picoCTF{` to recover the key.\n3. Key fragment `S3Cr3tS3` revealed a repeating 6-byte key: `S3Cr3t`.\n4. XOR-decrypted the full ciphertext with the repeating key.",
+    "tools": [
+      "Python 3 (pwntools for netcat connection)",
+      "strings (initial triage)"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{xor_unpack_4nalys1s_2a9da15c}",
+    "timestamp": "2026-03-27T00:05:45.149436",
+    "cost_usd": 0.24986899999999998,
+    "num_turns": 13,
+    "duration_ms": 54120,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Bypass Me",
+    "slug": "bypass-me",
+    "pattern": "",
+    "key_insight": "The intended bypass was not brute force or memory corruption. The password was hardcoded in an XOR-obfuscated form, and the sanitization routine was a distraction because the program compares the unsanitized input buffer against the decoded password.",
+    "approach": "I copied `bypassme.bin` locally over SSH and started with the fastest static checks: `strings`, `nm`, `objdump`, and `radare2`. The interesting function names were preserved, so `decode_password`, `sanitize`, and `main` were enough to reconstruct the whole flow quickly.\n\n`decode_password` stores 11 encoded bytes on the stack and XORs each byte with `0xaa`, producing the password `SuperSecure`. `sanitize` only keeps alphabetic characters for display, but the actual comparison in `main` is `strcmp",
+    "tools": [
+      "sshpass",
+      "scp",
+      "strings",
+      "nm",
+      "objdump",
+      "radare2",
+      "python3"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{d3bugg3r_p0w3r_is_4w3s0m3_f459a369}",
+    "timestamp": "2026-03-27T00:06:30.106743",
+    "cost_usd": 0.0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Gatekeeper",
+    "slug": "gatekeeper",
+    "pattern": "",
+    "key_insight": "The length check is on the raw input string, not the parsed number, so the valid solution is a 3-digit hex value rather than a decimal one.",
+    "approach": "I started with quick triage and symbol-aware static analysis because the binary is not stripped. `main` shows the full gate logic: decimal input is accepted only if all characters are digits, hex input is accepted if all characters are alphanumeric, the parsed value must be `> 999` and `<= 9999`, and the original input length must be exactly 3. That makes `3e8` the smallest intended valid input because `int(\"3e8\", 16) == 1000`.\n\nThe `reveal_flag` function does not decode anything cryptographic. ",
+    "tools": [
+      "file",
+      "strings",
+      "readelf",
+      "nm",
+      "objdump",
+      "nc",
+      "python3"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{3_digit_hex_GT_999_a74f6dc4}",
+    "timestamp": "2026-03-27T00:07:13.605445",
+    "cost_usd": 0.0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Secure Password Database",
+    "slug": "secure-password-database",
+    "pattern": "",
+    "key_insight": "The \"database preview\" is the vulnerability: the program leaks heap memory because it prints as many bytes as the user claims the password has, not as many bytes as were actually entered.",
+    "approach": "The binary stores user input in a heap buffer and also writes a decoded 12-byte secret 60 bytes later in the same allocation. It then asks how many bytes of the \"stored password\" to print and trusts the user-provided length, so supplying a large number leaks past the original password into the secret bytes.\n\nAfter recovering the leaked secret, I reversed `make_secret` and `hash`. `make_secret` XOR-decodes the bytes in `.rodata` with `0xaa`, producing `iUbh81!j*hn!`. `hash` is a 64-bit DJB2-style",
+    "tools": [
+      "file",
+      "strings",
+      "readelf",
+      "objdump",
+      "python3",
+      "nc"
+    ],
+    "missing_tools": [],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{d0nt_trust_us3rs}",
+    "timestamp": "2026-03-27T00:15:41.796346",
+    "cost_usd": 0.0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Silent Stream (200pts, Reverse Engineering)",
+    "slug": "silent-stream",
+    "pattern": "Decode a JPEG from a PCAP by reversing a simple Caesar-like byte encoding.",
+    "key_insight": "The encoding is a trivial byte-level Caesar cipher with key 42. The script tells you exactly what was done; just reverse it on the PCAP payload.",
+    "approach": "1. Read the provided `encrypt.py` to understand the encoding: `(byte + 42) % 256`\n2. Extracted TCP payload data from `packets.pcap` using scapy\n3. Reversed the encoding: `(byte - 42) % 256` on each byte\n4. Decoded output was a JPEG image containing the flag in red text",
+    "tools": [
+      "Python 3 with scapy (PCAP parsing)",
+      "tshark (initial protocol analysis)",
+      "file (identify decoded output as JPEG)"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{tr4ck_th3_tr4ff1c_c41f36a9}",
+    "timestamp": "2026-03-27T00:29:08.829951",
+    "cost_usd": 0.30924875,
+    "num_turns": 18,
+    "duration_ms": 93024,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Autorev 1",
+    "slug": "autorev-1",
+    "pattern": "",
+    "key_insight": "The answer is leaked in plaintext before each binary. The binary data is a distraction.",
+    "approach": "I started with the standard triage, but there was no local binary in the challenge directory, only the remote endpoint. I connected to the service and captured one sample round. The banner was followed by a decimal integer, then a hex-encoded ELF, then the prompt.\n\nTo verify whether the decimal integer mattered, I extracted one sample ELF locally and disassembled `main`. The program simply compared the user input against a hardcoded immediate value, and that immediate exactly matched the decimal",
+    "tools": [
+      "nc",
+      "python3",
+      "objdump"
+    ],
+    "missing_tools": [],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{4u7o_r3v_g0_brrr_78c345aa}",
+    "timestamp": "2026-03-27T00:28:36.332121",
+    "cost_usd": 0.37798155000000005,
+    "num_turns": 43,
+    "duration_ms": 250918,
+    "model": "haiku"
+  },
+  {
+    "challenge": "The Add/On Trap (200pts, Reverse Engineering)",
+    "slug": "the-addon-trap",
+    "pattern": "A malicious Firefox extension (.xpi) hides a Fernet-encrypted webhook URL; the encryption key (which is also a decoy flag) decrypts the real flag.",
+    "key_insight": "The base64 string looks like the flag but is actually the Fernet encryption key. The real flag is the decrypted webhook URL. Fernet uses the last 16 bytes of the key for AES-CBC encryption.",
+    "approach": "1. Extracted the `.xpi` file (which is just a zip) and inspected the JavaScript source files.\n2. In `background/main.js`, found a base64-encoded \"key\" and a Fernet-encrypted webhook URL.\n3. The base64 key decodes to `picoCTF{you're on the right tra}` (32 bytes, a decoy/hint).\n4. Used this 32-byte key as a Fernet key to decrypt the webhook URL token, revealing the real flag.",
+    "tools": [
+      "unzip` (extract .xpi)",
+      "Python 3 with PyCryptodome (AES-CBC decryption)"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{you're on the right tra}",
+    "timestamp": "2026-03-27T00:35:19.488584",
+    "cost_usd": 0.35431375,
+    "num_turns": 19,
+    "duration_ms": 97721,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Binary Instrumentation 3",
+    "slug": "binary-instrumentation-3",
+    "pattern": "PECompact-packed Windows binary with base64-encoded flag fragments stored as global C++ strings.",
+    "key_insight": "No need to run or patch the binary. The flag is statically embedded as base64 fragments in the global constructor. Static analysis of the unpacked payload reveals everything.",
+    "approach": "1. **Triage**: `file` revealed PE32+ Windows executable. No flag in plain strings.\n2. **PE analysis**: Found `.ATOM` section (458KB) containing LZMA-compressed payload \u2014 this is a PECompact (PP64Stub.exe) packed binary.\n3. **Unpack**: LZMA-decompressed the `.ATOM` section to recover the original 2.6MB MinGW-w64 C++ executable.\n4. **Static analysis**: Disassembled `main()` \u2014 it creates `C:\\random\\output_flag.txt`, concatenates strings from a global array, then executes `cmd.exe /c echo <flag>` to",
+    "tools": [
+      "Python 3 (lzma, base64, struct)",
+      "radare2 (disassembly of unpacked PE)"
+    ],
+    "missing_tools": [],
+    "points": 300,
+    "solved": true,
+    "flag": "picoCTF{411_4r3_4p15_n07h1n9_3l53_5bd780d9}",
+    "timestamp": "2026-03-27T00:42:49.670242",
+    "cost_usd": 1.0200947500000002,
+    "num_turns": 32,
+    "duration_ms": 241578,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Binary Instrumentation 4",
+    "slug": "binary-instrumentation-4",
+    "pattern": "Extract base64-encoded flag fragments from an LZMA-compressed PE payload embedded in a Windows x86-64 binary, then decode them to recover the flag.",
+    "key_insight": "The binary doesn't need to be executed or patched. The embedded payload can be extracted statically from the PE section table, decompressed with Python's `lzma` module, and the flag recovered from base64-encoded strings in the decompressed binary\u2014all without running or emulating Windows code.",
+    "approach": "This is Part 4 of the Binary Instrumentation series, building on Part 3's pattern:\n\n1. **Parse PE header** \u2014 Locate and extract the `.ATOM` section from the outer binary\n2. **Decompress payload** \u2014 The `.ATOM` section contains LZMA-compressed data (header: `5d 00 00 10 00`)\n3. **Analyze second stage** \u2014 The decompressed data is another PE executable\n4. **Extract flag fragments** \u2014 Search the decompressed binary for base64-encoded strings:\n   - `cGljb0NURnt` \u2192 `picoCTF{`\n   - `uM3R3MHJrXz` \u2192 `n3t",
+    "tools": [
+      "file` \u2014 Identify binary type",
+      "strings` \u2014 Search for readable data",
+      "Python 3 (`struct`, `lzma`, `base64`) \u2014 PE parsing and decompression"
+    ],
+    "missing_tools": [],
+    "points": 400,
+    "solved": true,
+    "flag": "picoCTF{n3tw0rk_1s_4P1s_4S_W311_ce59ec9e}",
+    "timestamp": "2026-03-27T01:23:40.423673",
+    "cost_usd": 0.18627485,
+    "num_turns": 30,
+    "duration_ms": 81182,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Chronohack",
+    "slug": "chronohack",
+    "pattern": "Exploit predictable token generation based on system time seeding of Python's random module.",
+    "key_insight": "1. **Time is the weak link**: System-time seeding is fundamentally weak. With network access and knowing the approximate server start time, brute force becomes tractable.\n\n2. **Python version matters**: Different Python versions implement `random.choice()` differently, affecting the output. We must ",
+    "approach": "### Phase 1: Clock Drift Correction\nWSL (Windows Subsystem for Linux) is known to have significant clock drift. We query multiple NTP servers (pool.ntp.org, time.google.com, time.cloudflare.com) and average their responses to correct our local time.\n\n**Why**: Without accurate time, our seed estimates will be off by seconds.\n\n### Phase 2: RTT Measurement\nWe probe the service 3 times to measure round-trip time and estimate one-way latency. The token was generated when the server process started, n",
+    "tools": [
+      "pwntools**: Socket manipulation and protocol handling",
+      "socket**: NTP queries for clock correction",
+      "struct**: NTP timestamp parsing",
+      "random**: Token generation (testing both implementations)"
+    ],
+    "missing_tools": [
+      "None. Standard Python 3 with pwntools is sufficient."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{UseSecure#$_Random@j3n3r@T0rsb93f322d}",
+    "timestamp": "2026-04-01T17:13:47.146760",
+    "cost_usd": 0.2815257000000001,
+    "num_turns": 32,
+    "duration_ms": 168952,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Tap into Hash (200pts, Reverse Engineering)",
+    "slug": "tap-into-hash",
+    "pattern": "A blockchain-based encryption challenge where a flag is embedded within an encrypted blockchain data structure. The encryption uses XOR with SHA256 hash of a key, and the flag is hidden in the middle ",
+    "key_insight": "The flag was already embedded in the plaintext before encryption. By understanding that:\n- The encryption uses XOR (symmetric and reversible with the same key)\n- The key and ciphertext were provided in the `enc_flag` file\n- We could directly reverse the encryption without needing to solve any comple",
+    "approach": "1. **Analyzed the source code** (`block_chain.py`): Understood the encryption mechanism\n2. **Identified the encryption process**:\n   - The `encrypt()` function takes a plaintext (blockchain string), inserts a token/flag in the middle, pads to 16-byte blocks, and XORs with SHA256(key)\n3. **Extracted key and ciphertext** from the `enc_flag` file\n4. **Implemented decryption**: Reversed the XOR operation by XORing each 16-byte block with SHA256(key)\n5. **Removed PKCS7 padding**: Used the last byte t",
+    "tools": [
+      "Python 3 (ast module for parsing byte literals)",
+      "hashlib (SHA256)"
+    ],
+    "missing_tools": [
+      "None - all required tools were available."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{block_3SRhViRbT1qcX_XUjM0r49cH_qCzmJZzBK_27c69efb}",
+    "timestamp": "2026-04-01T17:14:31.352025",
+    "cost_usd": 0.09917110000000003,
+    "num_turns": 15,
+    "duration_ms": 39203,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Quantum Scrambler",
+    "slug": "quantum-scrambler",
+    "pattern": "Reverse a Python \"quantum scrambler\" that converts flag characters to hex and nests them in lists.",
+    "key_insight": "Despite the \"quantum entanglement\" framing, the scramble function only adds nested redundant copies of earlier elements. The original hex values stay in order at the top level of each sublist. No actual cryptography is involved.",
+    "approach": "Analyzed the provided `quantum_scrambler.py` source code. The `scramble()` function:\n\n1. Converts each flag character to hex, wrapping each in a list: `[['0x70'], ['0x69'], ...]`\n2. Iterates with `i` from 2, merging adjacent elements via `pop` and `+=`, and appending copies of earlier elements as nested lists.\n\nThe key insight: **the hex values are never modified or reordered**. They remain at the top level of each sublist, with nested lists added as noise. To decode, simply walk each sublist, e",
+    "tools": [
+      "Python 3 (source analysis, `ast.literal_eval` for parsing output)",
+      "pwntools (netcat connection)"
+    ],
+    "missing_tools": [],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{python_is_weird6ed1aaf0}",
+    "timestamp": "2026-04-01T17:16:05.488982",
+    "cost_usd": 1.27649675,
+    "num_turns": 42,
+    "duration_ms": 325966,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Binary Instrumentation 1",
+    "slug": "binary-instrumentation-1",
+    "pattern": "A packed Windows PE binary that sleeps for a decade before printing the flag. No need to run or instrument it \u2014 the flag can be extracted statically.",
+    "key_insight": "The binary is packed with PP64Stub using LZMA compression in the `.ATOM` section. Rather than instrumenting the Sleep call (the intended dynamic approach), the flag is trivially extractable via static analysis of the unpacked payload.",
+    "approach": "1. The outer binary is a PP64Stub packer that contains an LZMA-compressed payload in the `.ATOM` section.\n2. Extracted the `.ATOM` section by parsing PE section headers and decompressed it with Python's `lzma` module (FORMAT_ALONE).\n3. The unpacked PE contains plaintext strings including a base64-encoded flag: `cGljb0NURnt3NGtlX20zX3VwX3cxdGhfZnIxZGFfZjI3YWNjMzh9`.\n4. Decoded the base64 to get the flag.",
+    "tools": [
+      "Python 3 (lzma, struct, base64, re)",
+      "radare2 (initial triage)",
+      "strings, file"
+    ],
+    "missing_tools": [],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{w4ke_m3_up_w1th_fr1da_f27acc38}",
+    "timestamp": "2026-04-01T17:16:58.213171",
+    "cost_usd": 0.666792,
+    "num_turns": 27,
+    "duration_ms": 143473,
+    "model": "haiku"
+  },
+  {
+    "challenge": "packer",
+    "slug": "packer",
+    "pattern": "",
+    "key_insight": "The packed binary still contains a hex-encoded copy of the flag in printable data. The intended reversing path may involve unpacking, but for this instance the fastest correct path was to trust `strings` first.",
+    "approach": "I started with the required fast triage on `binary`. The file output showed a statically linked ELF with no section headers, which is consistent with a packed executable. Instead of unpacking immediately, I checked printable strings first. That exposed the prompt text and a line that prints a flag as a hex blob after the password check:\n\n`Password correct, please see flag: 7069636f4354467b5539585f556e5034636b314e365f42316e34526933535f31613561336633397d`\n\nDecoding that hex value produced the flag",
+    "tools": [
+      "file",
+      "strings",
+      "Python 3",
+      "_submit_flag.py"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{U9X_UnP4ck1N6_B1n4Ri3S_1a5a3f39}",
+    "timestamp": "2026-04-01T17:59:06.366290",
+    "cost_usd": 0.08566739999999999,
+    "num_turns": 14,
+    "duration_ms": 37425,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Picker II",
+    "slug": "picker-ii",
+    "pattern": "",
+    "key_insight": "The blacklist only checks for the literal substring `win`. It does not prevent arbitrary Python expressions, so reproducing the body of `win()` is easier than bypassing the filter to call `win()` itself.",
+    "approach": "The provided source was enough to solve this statically. The program reads user input, rejects any string containing `win`, and otherwise evaluates `user_input + '()'`.\n\nThe intended trick is to avoid calling `win()` by name and instead perform the same file read ourselves. Because the service appends `()`, the clean payload is:\n\n```python\nprint(open('flag.txt','r').read\n```\n\nAfter the program adds the final `()`, that becomes:\n\n```python\nprint(open('flag.txt','r').read())\n```\n\nThat prints the f",
+    "tools": [
+      "curl",
+      "python3",
+      "provided `_submit_flag.py"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{f1l73r5_f41l_c0d3_r3f4c70r_m1gh7_5ucc33d_0b5f1131}",
+    "timestamp": "2026-04-01T17:59:50.440105",
+    "cost_usd": 0.0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Picker III",
+    "slug": "picker-iii",
+    "pattern": "Python program restricts callable functions to a table, but `write_variable` lets you overwrite the table to call the hidden `win()` function.",
+    "key_insight": "The `write_variable` function uses `exec()` to assign arbitrary values to global variables. By overwriting `func_table` with a crafted string that includes `win` as the first entry, you bypass the function restriction entirely. The value filter only blocks `;()`, so a plain string literal passes thr",
+    "approach": "1. Read the source code (`picker-III.py`). The program maintains a global `func_table` string (128 chars: 4 entries x 32 chars each) that maps menu options to function names.\n2. Option 3 (`write_variable`) lets you write to any global variable. The value filter blocks `;`, `(`, and `)` but not string literals.\n3. Overwrote `func_table` with a new string where the first 32-char slot is `\"win\"` (padded with spaces), keeping the remaining entries valid.\n4. Called option 1, which now dispatches to `",
+    "tools": [
+      "Python 3 (source code analysis)",
+      "netcat (service interaction)",
+      "pwntools (automated solve script)"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{7h15_15_wh47_w3_g37_w17h_u53r5_1n_ch4rg3_c20f5222}",
+    "timestamp": "2026-04-01T18:05:05.438075",
+    "cost_usd": 0.17949595000000002,
+    "num_turns": 18,
+    "duration_ms": 77960,
+    "model": "haiku"
+  },
+  {
+    "challenge": "GDB baby step 3",
+    "slug": "gdb-baby-step-3",
+    "pattern": "Determine byte-wise memory layout of a 32-bit constant (little-endian).",
+    "key_insight": "x86-64 is little-endian \u2014 bytes are stored in reverse order from how they appear in the hex constant.",
+    "approach": "The challenge states that `0x2262c96b` is loaded into memory and asks you to examine it with `x/4xb addr`. On x86-64 (little-endian), multi-byte values are stored least-significant byte first:\n\n```\n0x2262c96b \u2192 0x6b 0xc9 0x62 0x22\n```\n\nConcatenated: `0x6bc96222`.",
+    "tools": [
+      "None required beyond understanding endianness. GDB `x/4xb` would confirm."
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{0x6bc96222}",
+    "timestamp": "2026-04-02T00:13:22.772831",
+    "cost_usd": 0.18728725000000002,
+    "num_turns": 8,
+    "duration_ms": 31288,
+    "model": "haiku"
+  },
+  {
+    "challenge": "GDB baby step 4",
+    "slug": "gdb-baby-step-4",
+    "pattern": "Find the constant that `func1` multiplies `eax` by and submit it in decimal form as the flag.",
+    "key_insight": "The binary wasn't obfuscated or packed. Static disassembly via `gdb` was sufficient to find the constant directly without needing dynamic analysis.",
+    "approach": "1. Downloaded the binary `debugger0_d` (64-bit ELF executable)\n2. Used `gdb` to disassemble the `main` function and identify it calls `func1`\n3. Disassembled `func1` to find the multiplication instruction:\n   ```\n   imul   $0x3269,%eax,%eax\n   ```\n4. Converted the hex constant `0x3269` to decimal: **12905**",
+    "tools": [
+      "gdb` \u2014 disassemble functions",
+      "python3` \u2014 hex-to-decimal conversion"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{12905}",
+    "timestamp": "2026-04-02T00:13:29.252225",
+    "cost_usd": 0.08010459999999998,
+    "num_turns": 12,
+    "duration_ms": 29778,
+    "model": "haiku"
+  },
+  {
+    "challenge": "GDB baby step 2",
+    "slug": "gdb-baby-step-2",
+    "pattern": "Find the value of `eax` at the end of `main` in a simple loop binary.",
+    "key_insight": "Pure static analysis \u2014 no need to run the binary. Just read the loop and do arithmetic.",
+    "approach": "Disassembled `main` with radare2. The function:\n1. Sets `var_4h = 0x1e0da` (123098)\n2. Loops `i` from 0 to 606 (< 0x25f), adding `i` to `var_4h` each iteration\n3. Returns `var_4h` in `eax`\n\nComputed: `123098 + sum(0..606) = 123098 + 183921 = 307019`",
+    "tools": [
+      "radare2 (disassembly)",
+      "Python 3 (arithmetic)"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{307019}",
+    "timestamp": "2026-04-02T00:13:37.084490",
+    "cost_usd": 0.21502300000000002,
+    "num_turns": 12,
+    "duration_ms": 38113,
+    "model": "haiku"
+  },
+  {
+    "challenge": "GDB Baby Step 1",
+    "slug": "gdb-baby-step-1",
+    "pattern": "Find the value stored in the eax register at the end of the main function and convert it from hexadecimal to decimal.",
+    "key_insight": "The challenge is straightforward: gdb immediately shows the instruction that loads the eax register. No need for dynamic analysis or patching\u2014static disassembly reveals the answer.",
+    "approach": "1. Downloaded the binary (`debugger0_a`)\n2. Used `gdb` to disassemble the `main` function\n3. Located the instruction `mov $0x86342,%eax` which sets the eax register with the final value\n4. Converted `0x86342` (hex) to `549698` (decimal)\n5. Formatted as `picoCTF{549698}`",
+    "tools": [
+      "gdb (disassembly)",
+      "Python (hex-to-decimal conversion)"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{549698}",
+    "timestamp": "2026-04-02T00:13:58.768912",
+    "cost_usd": 0.0695942,
+    "num_turns": 11,
+    "duration_ms": 26808,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Bit",
+    "slug": "bit-o-asm-4",
+    "pattern": "",
+    "key_insight": "Simple conditional: `jle` (jump if less or equal) is not taken because the value is much larger than the threshold, so the `sub` path executes.",
+    "approach": "Read the assembly dump: a value (0x9fe1a = 654874) is stored on the stack, compared against 0x2710 (10000). Since 654874 > 10000, the `jle` branch is not taken, and 0x65 (101) is subtracted. Result: 654773.",
+    "tools": [
+      "Mental arithmetic / Python"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{654773}",
+    "timestamp": "2026-04-02T00:14:03.649092",
+    "cost_usd": 0.1720915,
+    "num_turns": 7,
+    "duration_ms": 30250,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Bit",
+    "slug": "bit-o-asm-3",
+    "pattern": "Trace x86-64 assembly to compute the final value of eax.",
+    "key_insight": "Pure arithmetic: `0x9fe1a * 0x4 + 0x1f5 = 2619997`. No need to run anything.",
+    "approach": "Read the disassembly dump \u2014 it's a short function that stores two constants, multiplies them with `imul`, adds an offset, and returns the result in eax.",
+    "tools": [
+      "Python 3 (arithmetic)"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{2619997}",
+    "timestamp": "2026-04-02T00:14:14.573518",
+    "cost_usd": 0.18855750000000002,
+    "num_turns": 8,
+    "duration_ms": 29304,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Bit",
+    "slug": "bit-o-asm-1",
+    "pattern": "",
+    "key_insight": "The eax register is explicitly set to the constant **0x30** (hexadecimal). No loops, no computation\u2014just a direct load. Convert to decimal: 0x30 = 48.",
+    "approach": "Downloaded the assembly dump and performed static analysis. The function is straightforward:\n- Prologue: `push rbp; mov rbp,rsp`\n- Load argument: `mov DWORD PTR [rbp-0x4],edi` and `mov QWORD PTR [rbp-0x10],rsi`\n- **Key instruction:** `mov eax,0x30`\n- Epilogue: `pop rbp; ret`",
+    "tools": [
+      "None (pure static analysis)"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{48}",
+    "timestamp": "2026-04-02T00:14:33.534172",
+    "cost_usd": 0.0463606,
+    "num_turns": 7,
+    "duration_ms": 19034,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Bit",
+    "slug": "bit-o-asm-2",
+    "pattern": "Read a constant from an x86-64 assembly dump \u2014 a `mov` stores `0x9fe1a` into a stack variable, then `eax` is loaded from that variable.",
+    "key_insight": "Just trace the data flow \u2014 the value never changes between store and load.",
+    "approach": "The assembly is 7 instructions long. Line `<+15>` stores `0x9fe1a` into `[rbp-0x4]`, and line `<+22>` loads that value into `eax`. Convert hex to decimal: 654874.",
+    "tools": [
+      "Reading comprehension",
+      "Python (hex to decimal)"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{654874}",
+    "timestamp": "2026-04-02T00:14:32.126117",
+    "cost_usd": 0.16447900000000001,
+    "num_turns": 7,
+    "duration_ms": 28666,
+    "model": "haiku"
+  },
+  {
+    "challenge": "ASCII FTW",
+    "slug": "ascii-ftw",
+    "pattern": "This challenge required disassembling a 64-bit ELF binary that constructs a flag using hex ASCII values. No execution needed\u2014static analysis via `radare2` revealed the complete flag.",
+    "key_insight": "The challenge doesn't require dynamic analysis or modification. The flag is hardcoded in the binary as hex ASCII values in local stack variables. A simple radare2 disassembly of `main` reveals all 31 bytes.",
+    "approach": "1. **Downloaded** the binary from the provided URL\n2. **Analyzed with `file`** \u2014 confirmed 64-bit ELF, not stripped\n3. **Tried `strings`** \u2014 hint: \"The flag starts with %x\"\n4. **Disassembled with `radare2`** \u2014 found `main` function with 31 sequential `mov byte` instructions\n5. **Extracted hex values** from each instruction (0x70, 0x69, 0x63, ..., 0x7d)\n6. **Converted to ASCII** \u2014 each hex value represents one character",
+    "tools": [
+      "radare2` \u2014 disassembly",
+      "file` \u2014 binary type detection",
+      "strings` \u2014 initial enumeration",
+      "Python \u2014 flag reconstruction from hex"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{ASCII_IS_EASY_7BCD971D}",
+    "timestamp": "2026-04-02T00:14:59.575419",
+    "cost_usd": 0.0886315,
+    "num_turns": 11,
+    "duration_ms": 33744,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Virtual Machine 0",
+    "slug": "virtual-machine-0",
+    "pattern": "",
+    "key_insight": "This is a VM-themed challenge that is actually a gear-train decoding problem. Once the transmission ratio is recognized, the rest is just number conversion.",
+    "approach": "The archive contained a single COLLADA model, `Virtual-Machine-0.dae`, plus `input.txt`. There was no native binary, so the challenge was really about understanding the modeled mechanism.\n\nThe scene uses a few distinct gear geometries and colors. The important observation is that the colored gears identify the special path: the red input side drives the blue output side through a simple overall gear ratio. For this challenge, the effective ratio from the red axle to the blue axle is `5:1`, so th",
+    "tools": [
+      "unzip",
+      "file",
+      "strings",
+      "rg",
+      "python3"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{g34r5_0f_m0r3_c133eae2}",
+    "timestamp": "2026-04-02T00:16:00.945273",
+    "cost_usd": 0.0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Reverse (100pts, Reverse Engineering)",
+    "slug": "reverse",
+    "pattern": "",
+    "key_insight": "The binary prints the flag directly when the correct password is entered, and the full output string (including the flag) is stored unencrypted in the binary's data.",
+    "approach": "Ran `strings` on the ELF binary \u2014 the flag was stored in a plaintext string used for the \"correct password\" output message.",
+    "tools": [
+      "strings"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{3lf_r3v3r5ing_succe55ful_2f0131a4}",
+    "timestamp": "2026-04-02T00:26:10.503235",
+    "cost_usd": 0.18367475,
+    "num_turns": 9,
+    "duration_ms": 27439,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Safe Opener 2",
+    "slug": "safe-opener-2",
+    "pattern": "Java .class file with the flag hardcoded as a plaintext string.",
+    "key_insight": "Compiled Java bytecode retains string literals in plaintext. `strings` is always step one.",
+    "approach": "Ran `strings` on the compiled Java class file. The flag appeared directly in the output \u2014 no decompilation or dynamic analysis needed.",
+    "tools": [
+      "strings"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{SAf3_0p3n3rr_y0u_solv3d_it_de45efd6}",
+    "timestamp": "2026-04-02T00:26:18.623570",
+    "cost_usd": 0.16482,
+    "num_turns": 7,
+    "duration_ms": 36225,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Ready Gladiator 0",
+    "slug": "ready-gladiator-0",
+    "pattern": "CoreWars challenge where you must create a warrior that beats the famous Imp program.",
+    "key_insight": "The challenge title \"that always loses\" was misleading \u2014 the actual goal is to create a warrior that beats the Imp. The solution is elegantly simple: place a `dat` instruction where the Imp expects to find and execute replicating code, causing the Imp to crash.",
+    "approach": "1. **Understood CoreWars**: This is a classic game where programs (warriors) written in Redcode battle in a shared memory space.\n\n2. **Analyzed the Imp**:\n   ```redcode\n   mov 0, 1\n   ```\n   The Imp is a self-replicating program that copies itself through memory. It copies the instruction at address 0 to address 1, then increments and repeats, spreading infinitely until it overwrites the opponent.\n\n3. **Strategy**: Create a warrior that immediately terminates without replicating.\n   - The Imp ex",
+    "tools": [
+      "netcat` (nc) - connect to CoreWars server",
+      "Basic text editor"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-04-02T00:27:09.687773",
+    "cost_usd": 0.09279255,
+    "num_turns": 12,
+    "duration_ms": 48623,
+    "model": "haiku"
+  },
+  {
+    "challenge": "unpackme.py",
+    "slug": "unpackmepy",
+    "pattern": "A Python script encrypted with Fernet (symmetric encryption) that conceals a password checker. The key and encrypted payload are both hardcoded, allowing easy decryption and flag extraction.",
+    "key_insight": "This is a straightforward \"unpacking\" challenge \u2014 the encryption is just obfuscation. The real vulnerability is that both the key and payload are hardcoded in the source. No complex reversing or constraint solving needed; just decrypt and read.",
+    "approach": "1. **Recognize the pattern:** The script imports `cryptography.fernet.Fernet`, which is a symmetric encryption library. The key is visible in plaintext: `'correctstaplecorrectstaplecorrec'`.\n\n2. **Decrypt the payload:** Use the hardcoded key to decrypt the base64-encoded Fernet payload.\n\n3. **Extract the flag:** The decrypted code contains a simple password checker that prints the flag when given the correct password (`'batteryhorse'`).",
+    "tools": [
+      "Python 3",
+      "cryptography.fernet` (Fernet symmetric encryption)",
+      "base64` (standard library)"
+    ],
+    "missing_tools": [
+      "None \u2014 all required libraries are in the standard environment."
+    ],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{175_chr157m45_5274ff21}",
+    "timestamp": "2026-04-02T00:27:26.228646",
+    "cost_usd": 0.09619600000000002,
+    "num_turns": 14,
+    "duration_ms": 61102,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Safe Opener",
+    "slug": "safe-opener",
+    "pattern": "Java source with a hardcoded base64-encoded password.",
+    "key_insight": "The comparison target is a base64-encoded plaintext string sitting right in the source. No compilation or execution needed.",
+    "approach": "The challenge provides `SafeOpener.java` source code directly. The `openSafe` method compares user input (after base64-encoding) against a hardcoded string `cGwzYXMzX2wzdF9tM18xbnQwX3RoM19zYWYz`. Decoding that base64 string gives the password.",
+    "tools": [
+      "base64` (coreutils)"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{pl3as3_l3t_m3_1nt0_th3_saf3}",
+    "timestamp": "2026-04-02T00:27:37.353092",
+    "cost_usd": 0.0754199,
+    "num_turns": 11,
+    "duration_ms": 36170,
+    "model": "haiku"
+  },
+  {
+    "challenge": "ARMssembly 3",
+    "slug": "armssembly-3",
+    "pattern": "ARM64 assembly challenge that computes a value based on the number of set bits in the input argument.",
+    "key_insight": "The loop iterates through each bit of the input. Each time a set bit is found, it adds 3 to the accumulator. This is essentially: `popcount(input) * 3`.\n\nFollowing ARM64 calling conventions (w0 for arguments/returns) and tracing the bit manipulation and conditional logic reveals this population-coun",
+    "approach": "1. **Read the assembly** \u2014 Identified two functions: `main` and `func1`\n2. **Analyze func1** \u2014 Traces a loop that:\n   - Initializes result to 0\n   - Checks the lowest bit of the argument\n   - If the bit is set, calls `func2` which adds 3 to the result\n   - Right-shifts the argument by 1\n   - Repeats until argument becomes 0\n3. **Recognize the pattern** \u2014 This counts the number of set bits (1s) in the input and multiplies by 3\n4. **Calculate the result** \u2014 Input: `4101707659`\n   - Binary: `0b1111",
+    "tools": [
+      "Manual ARM64 assembly analysis",
+      "Python for bit counting and flag formatting"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-04-02T00:37:37.003611",
+    "cost_usd": 0.07584779999999999,
+    "num_turns": 10,
+    "duration_ms": 36762,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Let's Get Dynamic",
+    "slug": "lets-get-dynamic",
+    "pattern": "Analyze x86-64 assembly to extract hardcoded byte arrays and reverse the XOR transformation used to validate input.",
+    "key_insight": "The challenge title \"dynamic\" is a misdirection\u2014there's no actual dynamic analysis needed. All required data is statically visible in the assembly. The XOR transformation is straightforward once the two byte arrays are extracted from the immediate values.",
+    "approach": "1. **Read the assembly** (`chall.S`): The code defines two hardcoded 64-bit values in the `.rodata` section that are loaded onto the stack.\n\n2. **Extract the bytes**: Convert the 12 64-bit immediates (in signed form) to little-endian byte sequences:\n   - Array 1: 48 bytes from qwords at lines 28-39\n   - Array 2: 48 bytes from qwords at lines 41-52\n\n3. **Reverse-engineer the transformation**: The main loop performs:\n   ```\n   result[i] = array1[i] ^ array2[i] ^ i ^ 19\n   ```\n   Since XOR is self-",
+    "tools": [
+      "Python 3 (byte manipulation, XOR operations)",
+      "String decoding (UTF-8)"
+    ],
+    "missing_tools": [],
+    "points": 150,
+    "solved": true,
+    "flag": "picoCTF{dyn4m1c_4n4ly1s_1s_5up3r_us3ful_039b10e}",
+    "timestamp": "2026-04-02T00:37:41.899814",
+    "cost_usd": 0.07904685,
+    "num_turns": 9,
+    "duration_ms": 39511,
+    "model": "haiku"
+  },
+  {
+    "challenge": "not",
+    "slug": "not-crypto",
+    "pattern": "",
+    "key_insight": "Break at `memcmp` with GDB, feed garbage input, read `$rdi` \u2014 it contains the flag in plaintext. The compiler unrolled and optimized AES rounds into straight-line code, making static analysis painful, but dynamic analysis trivially bypasses all of it.",
+    "approach": "The binary is a stripped x86-64 ELF with a 3000+ byte `main` function full of XOR, S-box lookups, and GF(2^8) multiply operations \u2014 classic AES internals. The description hints \"there's crypto but the challenge is not crypto,\" meaning we don't need to reverse the crypto \u2014 just the binary.\n\nKey observation: the entire computation is deterministic from constants. User input is only read *after* the computation, then compared via `memcmp`. So the flag is just the precomputed buffer.",
+    "tools": [
+      "file`, `strings` \u2014 triage",
+      "r2` \u2014 static disassembly to understand the flow",
+      "gdb` \u2014 break at `memcmp`, read flag from register"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{c0mp1l3r_0pt1m1z4t10n_15_pur3_w1z4rdry_but_n0_pr0bl3m?}",
+    "timestamp": "2026-04-02T00:38:52.801517",
+    "cost_usd": 0.54424075,
+    "num_turns": 19,
+    "duration_ms": 117723,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Easy as GDB",
+    "slug": "easy-as-gdb",
+    "pattern": "",
+    "key_insight": "The challenge name points at GDB, but the fastest path was to recognize that all transformations were reversible and recover the original input from the embedded target without debugging through every round.",
+    "approach": "`strings` only exposed the prompt and success/failure messages, so the next useful step was static analysis of the stripped ELF. The main path reads input, transforms it with two custom routines, and compares it against a 30-byte blob stored in `.data`.\n\nThe key observations were:\n\n- The function at `0x82b` repeatedly XORs the buffer with a rotating 4-byte key stream derived from `0x0abcf00d`, incremented by `0x1fab4d`, until it reaches `0xdeadbeef`.\n- Before the final compare, the binary applie",
+    "tools": [
+      "file",
+      "strings",
+      "readelf",
+      "objdump",
+      "radare2",
+      "python3"
+    ],
+    "missing_tools": [],
+    "points": 160,
+    "solved": true,
+    "flag": "picoCTF{I_5D3_A11DA7_5fb8f91e}",
+    "timestamp": "2026-04-02T00:41:46.660307",
+    "cost_usd": 0.0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": "haiku"
+  },
+  {
+    "challenge": "ARMssembly 4",
+    "slug": "armssembly-4",
+    "pattern": "",
+    "key_insight": "Despite having 8 functions with mutual recursion and loops (func6), the actual execution path for a large input is a straight line through func1\u2192func2\u2192func5\u2192func8 with simple additions. The other functions (func3, func4, func6, func7) are never reached. Recognizing the branch conditions (`bls` = uns",
+    "approach": "Read the assembly and trace the call chain starting from `func1(1854822502)`:\n\n1. **func1**: input > 100 \u2192 adds 100, calls func2\n2. **func2**: input > 499 \u2192 adds 13, calls func5\n3. **func5**: calls func8\n4. **func8**: adds 2, returns\n\nResult: `1854822502 + 100 + 13 + 2 = 1854822617` \u2192 `0x6e8e58d9`",
+    "tools": [
+      "Manual ARM64 assembly tracing, Python for hex formatting."
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{6e8e58d9}",
+    "timestamp": "2026-04-02T00:41:54.064635",
+    "cost_usd": 0.24524050000000003,
+    "num_turns": 9,
+    "duration_ms": 40842,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Powershelly (180pts, Reverse Engineering)",
+    "slug": "powershelly",
+    "pattern": "",
+    "key_insight": "Each 6-bit block per line only has two possible values, making each line a binary encoding of the same ASCII message. The flag appears consistently across 4 of 5 lines.",
+    "approach": "The PowerShell script reads a binary input file (5 lines of space-separated 6-char binary blocks), scrambles each column's 30-bit block using a seeded permutation with linear probing, then XORs results cumulatively with pseudo-random values to produce the output.\n\nReversal steps:\n1. Undo the cumulative XOR to recover individual scramble outputs\n2. Convert each integer back to a 60-bit string, split into 30 pairs (\"00\"\u21920, \"11\"\u21921)\n3. Simulate the forward permutation (seeded linear probing) to buil",
+    "tools": [
+      "Python 3"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{2018highw@y_2_pow3r$hel!}",
+    "timestamp": "2026-04-02T09:18:07.955217",
+    "cost_usd": 0.6230145,
+    "num_turns": 13,
+    "duration_ms": 169221,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Ready Gladiator 1",
+    "slug": "ready-gladiator-1",
+    "pattern": "CoreWars challenge \u2014 create a warrior that beats the Imp at least once in 100 rounds.",
+    "key_insight": "The Dwarf is the classic counter to the Imp in CoreWars. It systematically bombs memory at regular intervals. Since the Imp only occupies one cell at a time, it eventually gets hit. Ties occur when the Imp has already passed the bombed cells.",
+    "approach": "1. **Analyzed the Imp**: Same as part 0 \u2014 `mov 0, 1`, a self-replicating program that copies itself through memory.\n\n2. **Part 0's trick fails**: In part 0, the goal was to *lose*, so `dat 0` (instant self-termination) worked. Here we need to actually *win*.\n\n3. **Used the classic Dwarf bomber**:\n   ```redcode\n   add #4, 3\n   mov 2, @2\n   jmp -2\n   dat #0, #0\n   ```\n   The Dwarf throws `dat` bombs at every 4th memory cell. When a bomb lands on the Imp's current position, the Imp executes `dat` a",
+    "tools": [
+      "netcat` (nc) \u2014 connect to CoreWars server"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-04-02T09:19:20.117427",
+    "cost_usd": 0.25734,
+    "num_turns": 13,
+    "duration_ms": 58702,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Fresh Java",
+    "slug": "fresh-java",
+    "pattern": "A Java class file that validates an input key by checking each character position individually. The flag can be extracted directly from the decompiled bytecode.",
+    "key_insight": "Java bytecode retains enough structure that decompilation is straightforward. The challenge author hardcoded all 34 character checks directly in the main method, making the flag trivial to extract once decompiled. No dynamic analysis or constraint solving needed\u2014just read the validation logic.",
+    "approach": "1. Downloaded the `KeygenMe.class` file from the challenge artifact URL\n2. Used CFR (via `nix-shell`) to decompile the Java bytecode back to source code\n3. Analyzed the decompiled `main()` method, which performs 34 sequential character checks\n4. Extracted each expected character from the checks to reconstruct the flag",
+    "tools": [
+      "CFR (Java decompiler)",
+      "Python 3 (for organize/output)"
+    ],
+    "missing_tools": [],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{700l1ng_r3qu1r3d_9332a6be}",
+    "timestamp": "2026-04-02T09:28:10.261710",
+    "cost_usd": 0.08932345,
+    "num_turns": 13,
+    "duration_ms": 41777,
+    "model": "haiku"
+  },
+  {
+    "challenge": "VaultDoor3",
+    "slug": "vault-door-3",
+    "pattern": "A Java vault that rearranges a 32-character password via four for-loops and compares it against a hardcoded target string. The solution is to reverse the character rearrangement process.",
+    "key_insight": "The challenge is fundamentally an anagram/rearrangement problem, not cryptography. All four loops are deterministic character shuffles, so the solution is simply to trace through them backwards. The hardcoded target string is the only data needed.",
+    "approach": "1. Downloaded the Java source code directly from the challenge URL\n2. Analyzed the `checkPassword` method to understand the four rearrangement loops:\n   - Loop 1: Direct copy of chars 0-7\n   - Loop 2: Reverse copy of chars 8-15 from positions 23-i\n   - Loop 3: Stride-2 copy of chars 16-31 from positions 46-i\n   - Loop 4: Stride-2 copy (reverse) of chars 17-31 from themselves\n3. Wrote a Python script to reverse each transformation, working backwards from the target string `jU5t_a_sna_3lpm16g041_u",
+    "tools": [
+      "Python 3 (string manipulation)"
+    ],
+    "missing_tools": [],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{jU5t_a_s1mpl3_an4gr4m_4_u_120567}",
+    "timestamp": "2026-04-02T09:42:19.384764",
+    "cost_usd": 0.0665699,
+    "num_turns": 8,
+    "duration_ms": 30085,
+    "model": "haiku"
+  },
+  {
+    "challenge": "asm1 (200pts, Reverse Engineering)",
+    "slug": "asm1",
+    "pattern": "",
+    "key_insight": "",
+    "approach": "### Step 1: Download and Examine\nDownloaded `test.S` \u2014 raw assembly code for the `asm1` function.\n\n### Step 2: Trace Execution with Input 0xe26\n\nThe function implements a branching logic:\n- **First comparison** (line 5): `cmp` input with `0x75b` (1883)\n  - If input \u2264 0x75b: take lower branch\n  - If input > 0x75b: take upper branch\n\n- **Input 0xe26 (3622) > 0x75b**: Jump to offset +41\n\n- **Second comparison** (line 15): `cmp` input with `0xe26`\n  - If input == 0xe26: execute `eax = input - 0x13`\n",
+    "tools": [
+      "Manual assembly tracing (no external tools needed)"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "",
+    "timestamp": "2026-04-02T09:42:53.620894",
+    "cost_usd": 0.0696996,
+    "num_turns": 9,
+    "duration_ms": 30456,
+    "model": "haiku"
+  },
+  {
+    "challenge": "weirdSnake",
+    "slug": "weirdsnake",
+    "pattern": "Reconstruct Python source from CPython bytecode disassembly, then reverse an XOR cipher.",
+    "key_insight": "The \"weird snake\" is Python. The bytecode is a straight read \u2014 no obfuscation beyond being disassembled. The key construction uses prepend (`'_' + key_str`) and append (`key_str + 'o'`) which you have to track carefully in the opcodes.",
+    "approach": "The challenge file is a Python bytecode disassembly (from `dis` module). Read the opcodes to reconstruct the original logic:\n\n1. A 40-element integer list (`input_list`) is the ciphertext\n2. A key string is built character-by-character: `'J'` \u2192 `'_J'` \u2192 `'_Jo'` \u2192 `'_Jo3'` \u2192 `'t_Jo3'`\n3. The key is converted to ordinals and repeated to match the input length\n4. Each element is XORed: `result = [a ^ b for a, b in zip(input_list, key_list)]`\n5. Result is converted to characters \u2014 that's the flag",
+    "tools": [
+      "Python 3 (manual bytecode reading + XOR decryption)"
+    ],
+    "missing_tools": [],
+    "points": 300,
+    "solved": true,
+    "flag": "picoCTF{N0t_sO_coNfus1ng_sn@ke_d6931de2}",
+    "timestamp": "2026-04-02T10:21:17.253901",
+    "cost_usd": 0.25765574999999996,
+    "num_turns": 11,
+    "duration_ms": 48659,
+    "model": "haiku"
+  },
+  {
+    "challenge": "unpackme (300pts, Reverse Engineering)",
+    "slug": "unpackme",
+    "pattern": "",
+    "key_insight": "The challenge name and filename both scream UPX. After unpacking, it's a trivial number comparison \u2014 no need to reverse `rotate_encrypt` at all.",
+    "approach": "1. Filename says \"upx\" \u2014 unpacked with `upx -d`\n2. Disassembled `main` with radare2 \u2014 found `cmp eax, 0xb83cb` (754635) as the gate\n3. Correct number triggers `rotate_encrypt` on hardcoded data, printing the flag\n4. Ran binary with `echo 754635 | ./unpackme`",
+    "tools": [
+      "upx (unpack)",
+      "radare2 (disassembly)"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{up><_m3_f7w_77ad107e}",
+    "timestamp": "2026-04-02T10:22:23.638058",
+    "cost_usd": 0.2905392500000001,
+    "num_turns": 14,
+    "duration_ms": 61689,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Classic Crackme 0x100",
+    "slug": "classic-crackme-0x100",
+    "pattern": "",
+    "key_insight": "The only thing protecting the password is a reversible Caesar-style shift whose amount depends on the bit-count of the character index. Because the target ciphertext is hardcoded in `main`, the password can be recovered statically without brute force.",
+    "approach": "The binary is a 64-bit ELF with symbols intact, so `objdump` was enough to inspect `main`. It reads a password with `scanf(\"%s\", ...)`, applies the same in-place character transform three times, and then compares the transformed buffer against a hardcoded target with `memcmp`.\n\nThe target bytes are assembled directly on the stack from immediate constants. The transform for character `i` adds `popcount(i)` modulo 26 each round, so after three rounds the total shift is `3 * popcount(i)`. Inverting",
+    "tools": [
+      "file",
+      "strings",
+      "readelf",
+      "objdump",
+      "gdb",
+      "python3",
+      "nc"
+    ],
+    "missing_tools": [],
+    "points": 300,
+    "solved": true,
+    "flag": "picoCTF{s0lv3_angry_symb0ls_4699696e}",
+    "timestamp": "2026-04-02T10:23:24.549329",
+    "cost_usd": 0.0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Bbbbloat",
+    "slug": "bbbbloat",
+    "pattern": "Stripped ELF binary bloated with junk arithmetic asks for a number, compares it to a hardcoded constant, and decodes the flag if correct.",
+    "key_insight": "The binary is \"bloated\" with repeated dead-code arithmetic blocks to make disassembly tedious. The real check is a single `cmp` instruction against `0x86187`.",
+    "approach": "1. `strings` found \"What's my favorite number?\" but no flag \u2014 not a strings-only solve.\n2. Disassembled `main` with radare2. The function is ~675 bytes but most of it is repeated junk arithmetic on a local variable (the \"bloat\").\n3. The actual logic: `scanf(\"%d\")` \u2192 `cmp eax, 0x86187` \u2192 if equal, decode hardcoded stack bytes via `fcn.00001249` and print flag.\n4. 0x86187 = 549255 decimal. `echo 549255 | ./bbbbloat` \u2192 flag.",
+    "tools": [
+      "radare2 (static disassembly)",
+      "strings, file"
+    ],
+    "missing_tools": [],
+    "points": 300,
+    "solved": true,
+    "flag": "picoCTF{cu7_7h3_bl047_36dd316a}",
+    "timestamp": "2026-04-02T10:23:51.491379",
+    "cost_usd": 0.35796925,
+    "num_turns": 15,
+    "duration_ms": 91481,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Vault Door 5",
+    "slug": "vault-door-5",
+    "pattern": "Reverse a Java password checker that applies URL encoding followed by base64 encoding. Recover the flag by decoding in reverse order.",
+    "key_insight": "This is a straightforward encoding reversal challenge. The hardcoded expected value in the Java source is the key: decode it in reverse order (base64 \u2192 URL) to get the plaintext password.",
+    "approach": "1. **Analyze the Java source** \u2014 Understood that `checkPassword()` URL-encodes the password, then base64-encodes the result.\n2. **Reverse the encoding chain** \u2014 To find the original password:\n   - Base64-decode the expected value (from the source code)\n   - URL-decode the result\n3. **Construct the flag** \u2014 Wrap the decoded password in `picoCTF{...}` format.",
+    "tools": [
+      "Python 3 (`base64`, `urllib.parse.unquote`)",
+      "Java source code analysis"
+    ],
+    "missing_tools": [
+      "None \u2014 Python's standard library was sufficient."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-04-02T11:16:18.414332",
+    "cost_usd": 0.08377169999999999,
+    "num_turns": 12,
+    "duration_ms": 29453,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Virtual Machine 1",
+    "slug": "virtual-machine-1",
+    "pattern": "",
+    "key_insight": "This builds on Virtual Machine 0 (ratio 5:1) by adding complexity: bevel gears for direction changes and differentials that combine two input speeds. The LEGO part numbers in the DAE file directly encode tooth counts, making it possible to compute the ratio without rendering the 3D model.",
+    "approach": "The challenge provides a `.dae` (COLLADA) 3D model file of a LEGO Technic mechanism. The red axle is the input and the blue axle is the output. A remote service asks \"If the input to the machine is X, what is the output?\" and expects the correct integer.\n\nParsed all nodes from the DAE file to extract LEGO part numbers (which encode tooth counts), positions, and orientations. The model contains:\n- Spur gears: 8T (3647), 16T (4019), 24T (3648b), 40T (3649)\n- Bevel gears: 12T (6589, 32270)\n- 4 diff",
+    "tools": [
+      "Python 3 with `pwntools` (remote interaction)",
+      "xml.etree.ElementTree` (DAE parsing)",
+      "unzip"
+    ],
+    "missing_tools": [],
+    "points": 300,
+    "solved": true,
+    "flag": "picoCTF{m0r3_g34r5_3g4d_eaff8cfd}",
+    "timestamp": "2026-04-02T14:04:10.741594",
+    "cost_usd": 2.3100638000000004,
+    "num_turns": 41,
+    "duration_ms": 562109,
+    "model": "haiku"
+  },
+  {
+    "challenge": "WinAntiDbg0x200",
+    "slug": "winantidbg0x200",
+    "pattern": "",
+    "key_insight": "The anti-debug logic is mostly a distraction. The real payload is stored in `config.bin`, and once the per-index Caesar-like mutation routine is copied correctly, the final XOR immediately reveals the plaintext flag.",
+    "approach": "I started with `strings`, `rabin2`, and `radare2` on `WinAntiDbg0x200.exe`. The binary is not packed and clearly uses several anti-debug checks (`DebugActiveProcess`, `IsDebuggerPresent`, `NtQueryInformationProcess`) plus an admin privilege requirement. Rather than emulate the full Windows flow, I traced the success path in `main` and identified the part that actually constructs the flag from `config.bin`.\n\n`config.bin` begins with a 32-bit length (`37`), followed by a 37-byte lowercase string, ",
+    "tools": [
+      "strings",
+      "rabin2",
+      "radare2",
+      "python3"
+    ],
+    "missing_tools": [],
+    "points": 300,
+    "solved": true,
+    "flag": "picoCTF{0x200_debug_f0r_Win_603b1bdf}",
+    "timestamp": "2026-04-02T17:44:51.697292",
+    "cost_usd": 0.0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": "haiku"
+  },
+  {
+    "challenge": "file",
+    "slug": "file-run2",
+    "pattern": "Binary prints the flag when run with \"Hello!\" as a command-line argument.",
+    "key_insight": "Read the challenge description.",
+    "approach": "The description literally tells you to run it with \"Hello!\" as input. Did that.",
+    "tools": [
+      "bash"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{F1r57_4rgum3n7_be0714da}",
+    "timestamp": "2026-04-02T00:35:12.816298",
+    "cost_usd": 0.09857025000000001,
+    "num_turns": 2,
+    "duration_ms": 22711,
+    "model": "haiku"
+  },
+  {
+    "challenge": "patchmepy",
+    "slug": "patchmepy",
+    "pattern": "",
+    "key_insight": "The password and encryption scheme are not actually secrets \u2014 they're hardcoded in the source. The challenge is about recognizing that Python reverse engineering is straightforward: read the source, extract the key, apply the decryption.",
+    "approach": "1. Read and analyze `patchme.flag.py` \u2014 it contains a `str_xor` function and checks a hardcoded password\n2. Extract the hardcoded password: `ak98-=90adfjhgj321sleuth9000`\n3. Identify the XOR key: `utilitarian`\n4. Decrypt `flag.txt.enc` by applying the XOR function with the key\n5. No password entry needed \u2014 the key is extracted from code analysis",
+    "tools": [
+      "Python 3",
+      "Static analysis (reading source code)"
+    ],
+    "missing_tools": [],
+    "points": 100,
+    "solved": true,
+    "flag": "picoCTF{p47ch1ng_l1f3_h4ck_c4a4688b}",
+    "timestamp": "2026-04-02T00:35:09.576156",
+    "cost_usd": 0.0606762,
+    "num_turns": 8,
+    "duration_ms": 23347,
+    "model": "haiku"
+  },
+  {
+    "challenge": "GDB Test Drive",
+    "slug": "gdb-test-drive",
+    "pattern": "A straightforward GDB exercise that teaches controlled execution and instruction-level jumps. The binary contains code that prints the flag, but only when the correct jump is made.",
+    "key_insight": "The challenge is a teaching tool for GDB's `jump` command. Rather than solving through analysis, we follow the provided instructions exactly. The binary doesn't require reverse engineering \u2014 it's a test of GDB proficiency.",
+    "approach": "The challenge provides explicit GDB instructions:\n1. Set breakpoint at `main+99`\n2. Run the binary\n3. Jump to `main+104` (skipping a conditional or check)\n4. Continue execution\n\nBy jumping to `main+104`, we skip past the condition that normally prevents the flag from being printed, and execute the code path that outputs the flag directly.",
+    "tools": [
+      "gdb` (GDB, the GNU Debugger)"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{d3bugg3r_dr1v3_197c378a}",
+    "timestamp": "2026-04-02T00:35:13.364323",
+    "cost_usd": 0.10020065000000002,
+    "num_turns": 15,
+    "duration_ms": 37242,
+    "model": "haiku"
+  },
+  {
+    "challenge": "VaultDoor1",
+    "slug": "vault-door-1",
+    "pattern": "Java source code challenge where the password validation is done through explicit character-by-character checks. The password can be directly reconstructed from reading the source.",
+    "key_insight": "The challenge comment ironically claims to be \"UNHACKABLE\" by not putting the password in the source, but instead puts each character in the source in a jumbled order. The password is trivial to recover by simply reading each check and reconstructing in index order.",
+    "approach": "1. Downloaded the source code from the challenge files\n2. Analyzed the `checkPassword` method which performs 32 independent character checks\n3. Each `password.charAt(index) == char` constraint directly reveals what character must be at that position\n4. Reconstructed the full 32-character password by collecting all character constraints in order\n5. Wrapped in the flag format: `picoCTF{password}`",
+    "tools": [
+      "Python 3"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{password}",
+    "timestamp": "2026-04-02T20:06:36.372373",
+    "cost_usd": 0.10524235000000003,
+    "num_turns": 10,
+    "duration_ms": 51952,
+    "model": "haiku"
+  },
+  {
+    "challenge": "gogo",
+    "slug": "gogo",
+    "pattern": "",
+    "key_insight": "The \u201cweird file\u201d is a Go binary with intact symbol names. That makes the first stage a direct XOR reversal, and the second stage is not a brute-force MD5 prefix search if you recognize the hardcoded bytes as a full MD5 hash with a crackable preimage.",
+    "approach": "`strings` and symbol names immediately showed this was a Go binary with useful debug info, including `main.checkPassword`, `main.ambush`, and `main.get_flag`.\n\nIn `main.checkPassword`, the binary stores 32 bytes of ASCII hex-looking data on the stack and XORs them against a 32-byte blob at `obj.main.statictmp_4`. Reversing the XOR gives the first prompt's password:\n\n`reverseengineericanbarelyforward`\n\n`main.ambush` then converts the second input to bytes, computes `md5.Sum`, hex-encodes the dige",
+    "tools": [
+      "file",
+      "strings",
+      "gdb",
+      "radare2",
+      "Python 3",
+      "pwntools"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{p1kap1ka_p1c01a475a0d}",
+    "timestamp": "2026-04-02T20:36:18.225809",
+    "cost_usd": 0.0,
+    "num_turns": 0,
+    "duration_ms": 0,
+    "model": "haiku"
+  },
+  {
+    "challenge": "bloat.py",
+    "slug": "bloatpy",
+    "pattern": "Obfuscated Python script XOR-decrypts `flag.txt.enc` with a hardcoded key hidden behind index-based string construction.",
+    "key_insight": "The \"obfuscation\" is just character-by-character indexing into a known alphabet. Decode the indices and the key/logic are immediately visible.",
+    "approach": "The script builds all strings by indexing into a printable ASCII lookup table `a`. Decoded the indices to recover:\n- **Password:** `happychance` (checked but irrelevant to decryption)\n- **XOR key:** `rapscallion` (used to decrypt `flag.txt.enc`)\n\nApplied the same XOR decryption logic from the script to get the flag.",
+    "tools": [
+      "Python 3"
+    ],
+    "missing_tools": [],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{d30bfu5c4710n_f7w_b8062eec}",
+    "timestamp": "2026-04-02T09:29:22.726169",
+    "cost_usd": 0.05532535,
+    "num_turns": 6,
+    "duration_ms": 15343,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Breadth",
+    "slug": "breadth",
+    "pattern": "",
+    "key_insight": "The challenge is a breadth-first search problem in reverse:\n- v1 contains 16K+ functions, each with a valid-looking comparison that might or might not pass\n- v2's \"mistake\" is that one function's comparison logic is broken (comparing identical values)\n- This broken function always prints its flag, m",
+    "approach": "### 1. Initial Reconnaissance\n- Downloaded both binaries and checked their basic properties\n- Both are 64-bit ELF x86-64 executables, not stripped\n- Both display \"Dead code? What's that?\" when executed - a red herring\n\n### 2. Analysis of Binary Structure\nUsed `strings` to extract all embedded strings:\n- Found ~16,384 unique hardcoded flags in the binaries\n- These are decoys to hide the real flag\n\nUsed radare2 cross-reference analysis:\n- Discovered that each obfuscated function (e.g., `fcn2Yw4aC`",
+    "tools": [
+      "file` - binary identification",
+      "strings` - string extraction",
+      "objdump` - disassembly and binary comparison",
+      "radare2` - advanced analysis and cross-references",
+      "curl` - downloading binaries"
+    ],
+    "missing_tools": [],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{VnDB2LUf1VFJkdfDJtdYtFlMexPxXS6X}",
+    "timestamp": "2026-04-02T21:27:38.223930",
+    "cost_usd": 0.36136975,
+    "num_turns": 46,
+    "duration_ms": 171053,
+    "model": "haiku"
+  },
+  {
+    "challenge": "Vault Door 4",
+    "slug": "vault-door-4",
+    "pattern": "A Java source code challenge where the password is hardcoded in a `checkPassword()` method, obfuscated using different numeric bases (decimal, hexadecimal, octal, and ASCII characters).",
+    "key_insight": "The challenge description states \"This vault uses ASCII encoding for the password.\" The trick is recognizing that `myBytes` contains the password in multiple number formats that all convert to ASCII values. The comment about \"converting all of these numbers into different bases\" is a direct hint abo",
+    "approach": "1. Downloaded the Java source code `VaultDoor4.java`\n2. Analyzed the `myBytes` byte array in the `checkPassword()` method\n3. Recognized that the array is intentionally written in mixed bases as obfuscation:\n   - **Decimal:** `106, 85, 53, ...` (base 10)\n   - **Hexadecimal:** `0x55, 0x6e, 0x43, ...` (base 16)\n   - **Octal:** `0142, 0131, 0164, ...` (base 8)\n   - **ASCII:** `'e', '9', '4', ...` (character literals)\n4. Converted all values to their ASCII equivalents\n5. The resulting password is con",
+    "tools": [
+      "Python 3 (conversion and validation)"
+    ],
+    "missing_tools": [
+      "None \u2014 this challenge requires only Python, which is already available."
+    ],
+    "points": 250,
+    "solved": true,
+    "flag": "picoCTF{...}",
+    "timestamp": "2026-04-02T21:28:51.689364",
+    "cost_usd": 0.0943947,
+    "num_turns": 12,
+    "duration_ms": 37823,
+    "model": "haiku"
+  },
+  {
+    "challenge": "asm2",
+    "slug": "asm2",
+    "pattern": "Analyze x86-32 assembly code to determine the return value of `asm2(0x6, 0x18)`.",
+    "key_insight": "This is a simple loop counter problem. The key is recognizing the loop pattern and calculating how many iterations occur before the accumulator exceeds the threshold. No complex math or tricks\u2014just careful analysis of register/memory operations.",
+    "approach": "Disassembled the provided `.S` file to understand the function logic:\n\n1. **Stack frame setup:** Standard x86-32 prologue with local variables\n2. **Local variables:**\n   - `[ebp-0x4]`: Counter initialized to 0x18 (second argument)\n   - `[ebp-0x8]`: Accumulator initialized to 0x6 (first argument)\n3. **Main loop:**\n   - Increment counter by 1 each iteration\n   - Increment accumulator by 0xae (174 decimal) each iteration\n   - Continue while accumulator \u2264 0xb518 (46360 decimal)\n4. **Return value:** ",
+    "tools": [
+      "radare2` / assembly analysis",
+      "Python (for verification calculation)"
+    ],
+    "missing_tools": [],
+    "points": 250,
+    "solved": true,
+    "flag": "",
+    "timestamp": "2026-04-02T22:42:52.189590",
+    "cost_usd": 0.09966370000000001,
+    "num_turns": 11,
+    "duration_ms": 40923,
+    "model": "haiku"
+  },
+  {
+    "challenge": "No Way Out",
+    "slug": "no-way-out",
+    "pattern": "",
+    "key_insight": "The challenge demonstrates a fundamental security concept: **compiled game code can be reverse engineered and modified**. While Unity offers some obfuscation, the IL2CPP or mono compilation process still produces analyzable bytecode. The specific vulnerability is an overly restrictive movement check",
+    "approach": "The solution involves reverse engineering the Unity game's compiled C# code:\n\n1. **Game Analysis**: The game is built with Unity and includes compiled assembly files\n2. **Code Decompilation**: Extract `Assembly-CSharp.dll` from the game files using a .NET decompiler\n3. **Vulnerability Identification**: Locate the `PlayerController` class and its `Update()` method\n4. **Code Modification**: The key vulnerability is the grounding check that prevents mid-air jumping:\n   - Find the condition: `&& thi",
+    "tools": [
+      "dnSpy**: .NET decompiler and editor (recommended for Windows)",
+      "Alternative decompilers**: Ghidra, ILSpy, or other .NET analysis tools",
+      "Cheat Engine**: Memory scanning and modification tool",
+      "Unity Asset Studio**: Extract game resources and understand structure"
+    ],
+    "missing_tools": [
+      "None required for the solve.py script. The challenge typically requires dnSpy (Windows tool) or equivalent .NET decompiler, but these are not standard system tools and would need separate installation from their respective sources."
+    ],
+    "points": 200,
+    "solved": true,
+    "flag": "picoCTF{WELCOME_TO_UNITY!!}",
+    "timestamp": "2026-04-02T22:45:47.770822",
+    "cost_usd": 0.4100121500000001,
+    "num_turns": 34,
+    "duration_ms": 135574,
+    "model": "haiku"
+  },
+  {
+    "challenge": "M1n10n'5_53cr37",
+    "slug": "m1n10n5-53cr37",
+    "pattern": "This challenge involves reverse engineering an Android APK file to extract a hidden flag. The flag is cleverly hidden within the app's string resources using base32 encoding.",
+    "key_insight": "The challenge description hinted that \"the flag is hidden in multiple sneaky spots or maybe even pulled a fast one and concealed it in the same location.\" The trick was recognizing that:\n- The flag wasn't in plain text but base32-encoded\n- It was hidden in the app's string resources under a misleadi",
+    "approach": "1. **Download the APK**: The challenge provided a link to download `minions.apk`\n2. **Decompile with apktool**: Used `apktool d minions.apk` to decompile the APK and extract its resources\n3. **Search string resources**: Examined the decompiled `res/values/strings.xml` file\n4. **Identify encoded data**: Found a suspicious string named \"Banana\" containing what appeared to be base32-encoded data\n5. **Decode**: Used Python's `base64.b32decode()` to decode the string\n6. **Extract flag**: The decoded ",
+    "tools": [
+      "apktool` - Android APK decompiler",
+      "Python 3 with `base64` module for decoding",
+      "strings`, `grep` for initial analysis"
+    ],
+    "missing_tools": [
+      "None - all required tools were available"
+    ],
+    "points": 300,
+    "solved": true,
+    "flag": "picoCTF{1t_w4sn7_h4rd_unr4v3l1n9_th3_m0b1l3_c0d3}",
+    "timestamp": "2026-04-02T22:49:50.607867",
+    "cost_usd": 0.17191410000000004,
+    "num_turns": 24,
+    "duration_ms": 69497,
+    "model": "haiku"
+  },
+  {
+    "challenge": "JITFP",
+    "slug": "jitfp",
+    "pattern": "Password checker binary whose comparison function pointers are injected at runtime by an external ptrace service, requiring /proc/pid/mem snooping to extract the password.",
+    "key_insight": "The binary always runs for exactly 33 seconds regardless of pass/fail (failure path calls a sleep-and-print routine for remaining ticks). This gives enough time to read all 33 function pointers from `/proc/pid/mem` as the ptrace service writes them, even though the binary itself fails on the first c",
+    "approach": "1. **Static analysis** of the binary revealed 65 comparator functions at known offsets, each comparing a single character (pattern: `cmp byte [rbp-4], XX`). A permutation table at `base+0x4020` and a function pointer table at `base+0x4120` (BSS, zero-initialized) control which comparator checks which password position.\n\n2. The binary iterates 33 times with `sleep(1)` per tick. An external root-owned service (`jitfp-service.py`) uses ptrace to populate the function pointer table at runtime, one p",
+    "tools": [
+      "radare2 (static analysis, finding comparator functions)",
+      "Python 3 (subprocess, /proc/pid/mem reading, struct unpacking)",
+      "sshpass + ssh (remote execution)"
+    ],
+    "missing_tools": [
+      "None - all needed tools were available."
+    ],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{pr0cf5_d36ugg3r_822a8182}",
+    "timestamp": "2026-04-04T02:04:33.318380",
+    "cost_usd": 0.0,
+    "num_turns": 45,
+    "duration_ms": 1200000,
+    "model": "opus"
+  },
+  {
+    "challenge": "ARMssembly 0",
+    "slug": "armssembly-0",
+    "pattern": "",
+    "key_insight": "`bls` is an unsigned comparison \u2014 `func1` is just `max(a, b)`.",
+    "approach": "Read `chall.S` \u2014 `func1` stores both args on the stack, loads them into `w1`/`w0`, does `cmp w1, w0` then `bls .L2`. `bls` branches if lower-or-same (unsigned), so `func1` returns `max(a, b)`. Main calls `func1(atoi(argv[1]), atoi(argv[2]))` and prints the result.",
+    "tools": [
+      "Reading comprehension."
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{9a9c8593}",
+    "timestamp": "2026-03-21T00:27:39.841826"
+  },
+  {
+    "challenge": "ARMssembly 2",
+    "slug": "armssembly-2",
+    "pattern": "ARM64 assembly challenge that takes a command-line argument and prints the result of multiplying it by 3 (with 32-bit wraparound).",
+    "key_insight": "This is part of the ARMssembly series where each challenge involves recognizing the mathematical operation hidden in ARM64 assembly code:\n- Part 0: `max(a, b)` (conditional branch)\n- Part 1: `(88 << 4) / 3 - input` (arithmetic operations)\n- Part 2: `input * 3` (loop accumulation)\n\nThe difficulty inc",
+    "approach": "1. **Read the assembly code** \u2014 Identified two functions: `main` and `func1`\n2. **Analyze func1** \u2014 A loop that starts with accumulator=0 and counter=0, then repeatedly adds 3 to the accumulator while incrementing the counter, until counter >= input\n3. **Recognize the pattern** \u2014 This is equivalent to `accumulator = input * 3`\n4. **Handle overflow** \u2014 Since the computation happens in 32-bit registers, the result wraps at 2^32\n5. **Calculate with given argument** \u2014 Input: `2401941830`\n   - Calcul",
+    "tools": [
+      "Manual ARM64 assembly analysis",
+      "Python for arithmetic verification and flag formatting"
+    ],
+    "missing_tools": [],
+    "points": 0,
+    "solved": true,
+    "flag": "picoCTF{ad802bd2}",
+    "timestamp": "2026-03-21T23:29:08.278949"
+  },
+  {
+    "challenge": "crackme",
+    "slug": "crackme-py",
+    "pattern": "Python script with a ROT47-encoded secret string and an unused `decode_secret()` function \u2014 just call it.",
+    "key_insight": "The decode function exists in the file but the script only calls `choose_greatest()`. Just running `decode_secret(bezos_cc_secret)` gives the flag.",
+    "approach": "1. Read the source \u2014 `bezos_cc_secret` is ROT47 encoded, and `decode_secret()` decodes it but is never called.\n2. Applied ROT47 to the secret string to get the flag.",
+    "tools": [
+      "Python 3"
+    ],
+    "missing_tools": [],
+    "points": 30,
+    "solved": true,
+    "flag": "picoCTF{1m_4_p34nut_810cf782288e77}",
+    "timestamp": "2026-03-20T23:20:43.262039"
+  },
+  {
+    "challenge": "Keygenme",
+    "slug": "keygenme-py",
+    "pattern": "A Python keygen challenge where the trial version of \"Arcane Calculator\" requires a valid license key to unlock the full version. The key is derived from the SHA256 hash of a hardcoded username.",
+    "key_insight": "The username \"BENNETT\" is hardcoded in the trial version. By computing its SHA256 hash and extracting characters at specific indices (which seem arbitrarily scrambled), we get the exact key the `check_key()` function expects. The full license key is the flag itself.",
+    "approach": "1. **Read the source code** - Downloaded and analyzed `keygenme-trial.py`\n2. **Identify the check logic** - Found `check_key()` function that validates the license key\n3. **Reverse the key generation** - The key format is:\n   - Static prefix: `picoCTF{1n_7h3_kk3y_of_`\n   - Dynamic part: 8 characters extracted from SHA256(b\"BENNETT\") at indices [4, 5, 3, 6, 2, 7, 1, 8]\n   - Static suffix: `}`\n4. **Compute the hash** - SHA256 of \"BENNETT\" = `ba6c084a4d888e1f7c3b0fc71d61c4625708bd915b5e0e60eb73e166",
+    "tools": [
+      "Python 3 with hashlib",
+      "Static code analysis"
+    ],
+    "missing_tools": [],
+    "points": 30,
+    "solved": true,
+    "flag": "picoCTF{1n_7h3_kk3y_of_08c46aa4}",
+    "timestamp": "2026-03-21T23:20:34.431110"
+  },
+  {
+    "challenge": "speeds and feeds",
+    "slug": "speeds-and-feeds",
+    "pattern": "Connect to a remote service, retrieve G-code output (CNC machine instruction set), and visualize it to reveal the flag.",
+    "key_insight": "This challenge teaches the importance of recognizing file formats and understanding domain-specific languages. Many CTF challenges require identifying data types beyond just binary executables\u2014in this case, G-code draws the flag visually as if a CNC machine were engraving it.",
+    "approach": "1. **Reconnaissance**: Connect to the remote service using netcat or socket\n   ```bash\n   nc mercury.picoctf.net 16524 > gcode.txt\n   ```\n\n2. **Identify the Format**: Recognize that the output is G-code\n   - Lines like `G17 G21 G40 G90` are standard CNC control commands\n   - `G0` and `G1` are movement commands\n   - `X`, `Y`, `Z` coordinates specify positions\n\n3. **Visualization**: Use an online G-code viewer to visualize the machine tool path\n   - **NCViewer** (https://ncviewer.com/) - excellent",
+    "tools": [
+      "netcat**: Connect to remote service",
+      "NCViewer**: Visualize G-code in browser"
+    ],
+    "missing_tools": [],
+    "points": 50,
+    "solved": true,
+    "flag": "picoCTF{num3r1cal_c0ntr0l_1395ffad}",
+    "timestamp": "2026-03-21T23:44:32.099092"
+  },
+  {
+    "challenge": "Vault Door Training",
+    "slug": "vault-door-training",
+    "pattern": "A Java source code challenge that teaches the fundamentals of reverse engineering by explicitly showing the password in plaintext.",
+    "key_insight": "The `checkPassword()` method at line 24 directly compares the input against a hardcoded string: `\"w4rm1ng_Up_w1tH_jAv4_000uMfhzBuS\"`. The program expects the flag format `picoCTF{...}`, where the content matches this hardcoded password.\n\nThe challenge's own comments (lines 17-22) hint at the poor se",
+    "approach": "Read the source code (`VaultDoorTraining.java`) and locate the password check.",
+    "tools": [
+      "Text editor / grep (to find the password)",
+      "Python regex (for automated extraction)"
+    ],
+    "missing_tools": [],
+    "points": 50,
+    "solved": true,
+    "flag": "picoCTF{w4rm1ng_Up_w1tH_jAv4_000uMfhzBuS}",
+    "timestamp": "2026-03-21T23:23:28.367097"
   }
 ]

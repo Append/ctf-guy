@@ -2,6 +2,7 @@
 """Interact command — spin up a shared terminal session for a challenge."""
 
 import asyncio
+import contextlib
 import logging
 import os
 import secrets
@@ -203,10 +204,8 @@ class InteractCog(commands.Cog):
         monitor = session.get("_monitor_task")
         if monitor:
             monitor.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
                 await monitor
-            except (asyncio.CancelledError, Exception):
-                pass
 
         proc = session.get("process")
         if proc and proc.returncode is None:
@@ -287,10 +286,7 @@ class InteractCog(commands.Cog):
         return embed
 
     def _is_authorized(self, interaction: discord.Interaction) -> bool:
-        allowed = self.bot.config.allowed_user_ids
-        if not allowed:
-            return True
-        return interaction.user.id in allowed
+        return self.bot.config.is_user_allowed(interaction.user.id)
 
 
 def _get_host() -> str:

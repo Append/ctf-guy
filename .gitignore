@@ -31,3 +31,10 @@ bot/main.py
 bot/bot/
 bot/pyghidra_mcp_projects/
 .worktrees/
+
+# Editor swap/backup files. These matter here because editing .env leaves a
+# swap alongside it (nano writes ..env.swp, vim .env.swp) that is NOT covered
+# by the .env rules above and can carry secrets.
+*.swp
+*.swo
+*~

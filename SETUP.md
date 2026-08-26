@@ -156,6 +156,33 @@ uv sync
 uv run python run.py
 ```
 
+### Telemetry (optional)
+
+The Grafana/VictoriaMetrics stack reads a **second** env file at the repo root.
+This is separate from `bot/.env` above — compose only reads the root one.
+
+```bash
+# From the repo root, not bot/
+cp .env.example .env
+nano .env
+```
+
+`GRAFANA_ADMIN_PASSWORD` is required and has no default: the stack refuses to
+start without it. An empty value counts as unset, so it needs a real password.
+
+```bash
+docker compose -f docker-compose.telemetry.yml up -d
+```
+
+Grafana comes up on `localhost:3000` (`admin` / whatever you set). Anonymous
+access is off, so it will prompt for login.
+
+> Grafana only applies `GRAFANA_ADMIN_PASSWORD` when it first initializes its
+> database. If the `grafana-data` volume already exists, the stored password
+> wins and changes to `.env` are ignored. Reset it with
+> `docker compose -f docker-compose.telemetry.yml exec grafana grafana-cli admin reset-admin-password '<new>'`,
+> or wipe the volume with `down -v` to re-provision from scratch.
+
 ## Platform-specific Notes
 
 ### WSL2

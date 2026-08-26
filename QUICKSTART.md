@@ -70,7 +70,22 @@ AUTOSOLVE_CONCURRENCY=10        # Parallel workers
 CTF_ISOLATION=none              # none, tmpfs, bwrap, devcontainer
 ```
 
-### 5. Start the Bot
+### 5. Configure Telemetry (optional)
+
+Skip this if you don't want Grafana dashboards. The telemetry stack reads its
+own env file at the **repo root** — `bot/.env` above does not cover it.
+
+```bash
+# From the repo root, not bot/
+cp .env.example .env
+nano .env   # GRAFANA_ADMIN_PASSWORD is required; empty counts as unset
+docker compose -f docker-compose.telemetry.yml up -d
+```
+
+Grafana on `localhost:3000`, log in as `admin`. See SETUP.md if you need to
+reset a password Grafana has already stored.
+
+### 6. Start the Bot
 
 ```bash
 cd bot

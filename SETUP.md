@@ -161,8 +161,11 @@ uv run python run.py
 The Grafana/VictoriaMetrics stack reads a **second** env file at the repo root.
 This is separate from `bot/.env` above — compose only reads the root one.
 
+The step above left you in `bot/`, so step back up first — running `cp
+.env.example .env` there would overwrite the bot config you just filled in.
+
 ```bash
-# From the repo root, not bot/
+cd ..          # back to the repo root
 cp .env.example .env
 nano .env
 ```
@@ -177,11 +180,33 @@ docker compose -f docker-compose.telemetry.yml up -d
 Grafana comes up on `localhost:3000` (`admin` / whatever you set). Anonymous
 access is off, so it will prompt for login.
 
-> Grafana only applies `GRAFANA_ADMIN_PASSWORD` when it first initializes its
-> database. If the `grafana-data` volume already exists, the stored password
-> wins and changes to `.env` are ignored. Reset it with
-> `docker compose -f docker-compose.telemetry.yml exec grafana grafana-cli admin reset-admin-password '<new>'`,
-> or wipe the volume with `down -v` to re-provision from scratch.
+> **Grafana only applies `GRAFANA_ADMIN_PASSWORD` when it first initializes its
+> database.** If the `grafana-data` volume already exists, the stored password
+> wins and edits to `.env` are silently ignored — which looks like the password
+> "didn't take". Reset it in place:
+>
+> ```bash
+> docker compose -f docker-compose.telemetry.yml exec grafana \
+>   grafana cli admin reset-admin-password '<new password>'
+> ```
+>
+> Note `grafana cli` (subcommand), not `grafana-cli` — the standalone
+> `grafana-cli` binary was removed in Grafana 13.0 and this stack pins 13.2.
+
+If you would rather start Grafana from scratch, remove **only** its volume —
+the containers must be down first, since a volume in use cannot be removed:
+
+```bash
+docker compose -f docker-compose.telemetry.yml down
+docker volume rm ctf-guy_grafana-data     # project name = this directory's name
+docker compose -f docker-compose.telemetry.yml up -d
+```
+
+> **Do not use `down -v` for this.** It removes every volume in the stack —
+> `grafana-data`, `vm-data`, and `vl-data` — destroying all retained metrics
+> and agent logs, not just the password database. Dashboards, datasources, and
+> alerting are re-provisioned from `deploy/grafana/` on every start, so wiping
+> `grafana-data` costs you only ad-hoc UI changes.
 
 ## Platform-specific Notes
 

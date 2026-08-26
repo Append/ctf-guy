@@ -75,10 +75,13 @@ CTF_ISOLATION=none              # none, tmpfs, bwrap, devcontainer
 Skip this if you don't want Grafana dashboards. The telemetry stack reads its
 own env file at the **repo root** — `bot/.env` above does not cover it.
 
+Step 4 left you in `bot/` — `cd ..` first, or the `cp` will overwrite the bot
+config you just filled in and compose won't find its file.
+
 ```bash
-# From the repo root, not bot/
+cd ..          # back to the repo root
 cp .env.example .env
-nano .env   # GRAFANA_ADMIN_PASSWORD is required; empty counts as unset
+nano .env      # GRAFANA_ADMIN_PASSWORD is required; empty counts as unset
 docker compose -f docker-compose.telemetry.yml up -d
 ```
 

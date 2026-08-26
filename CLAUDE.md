@@ -174,6 +174,7 @@ Links included in challenge thread embeds.
 - `learner.py` writes pattern files under `normalize_category(category)` — canonical names only (`crypto/forensics/misc/pwn/rev/web`). Don't reintroduce raw-category filenames.
 - `pyghidra-mcp` is an optional extra (`uv sync --extra ghidra`), not a default dep — it is spawned out-of-process via `uvx` and drags in chromadb, which has unfixed advisories.
 - Telemetry stack binds `127.0.0.1` only and requires `GRAFANA_ADMIN_PASSWORD`; Grafana anonymous access is off.
+- The telemetry stack reads a **root** `.env` (compose only reads the project-root one) — separate from `bot/.env`. `${GRAFANA_ADMIN_PASSWORD:?}` treats empty as unset, so a blank value fails the same as a missing file. Grafana applies that password only when it first initializes `grafana-data`; on an existing volume the stored password wins and `.env` changes are ignored (reset via `grafana-cli admin reset-admin-password`, or `down -v`).
 
 ## Key Configuration (.env)
 

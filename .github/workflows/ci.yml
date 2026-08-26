@@ -13,6 +13,10 @@ jobs:
       - uses: astral-sh/ruff-action@4919ec5cf1f49eff0871dbcea0da843445b837e6 # v3
         with:
           src: "./bot"
+          # Explicit: the repo root pyproject.toml declares no ruff, so leaving
+          # this to auto-discovery would fall back to "latest" and silently
+          # ignore the pin in bot/pyproject.toml.
+          version-file: "bot/pyproject.toml"
 
   test:
     runs-on: ubuntu-latest

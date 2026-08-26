@@ -15,7 +15,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff", "black", "pytest", "pytest-asyncio"]
+# ruff is pinned: CI lint resolves its version from this file, so an
+# unconstrained spec lets a new ruff release fail main with no code change.
+dev = ["ruff==0.16.4", "black", "pytest", "pytest-asyncio"]
 # Only needed if GHIDRA_MCP_ENABLED=true. The server is spawned out-of-process
 # via `uvx pyghidra-mcp` and never imported here, so it stays out of the default
 # install — it drags in chromadb, which currently has unfixed advisories.

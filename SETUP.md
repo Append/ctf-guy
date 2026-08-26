@@ -197,9 +197,21 @@ If you would rather start Grafana from scratch, remove **only** its volume —
 the containers must be down first, since a volume in use cannot be removed:
 
 ```bash
+# Ask compose for the project name rather than assuming it. It is pinned to
+# ctf-guy in docker-compose.telemetry.yml, but -p and COMPOSE_PROJECT_NAME
+# both override that, and volumes are always named <project>_<volume>.
+PROJECT=$(docker compose -f docker-compose.telemetry.yml config --format json \
+  | python3 -c 'import sys,json; print(json.load(sys.stdin)["name"])')
+
 docker compose -f docker-compose.telemetry.yml down
-docker volume rm ctf-guy_grafana-data     # project name = this directory's name
+docker volume rm "${PROJECT}_grafana-data"
 docker compose -f docker-compose.telemetry.yml up -d
+```
+
+If you'd rather look it up by hand, compose labels every volume it creates:
+
+```bash
+docker volume ls --filter label=com.docker.compose.volume=grafana-data
 ```
 
 > **Do not use `down -v` for this.** It removes every volume in the stack —

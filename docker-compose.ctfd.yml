@@ -1,6 +1,6 @@
 services:
   ctfd:
-    image: ctfd/ctfd:3.8.7@sha256:284f1f06c5464108c4eaaea8a28934cb1e81d491e3f0fe60f3d686cf38593e41
+    image: ctfd/ctfd:3.8.9@sha256:84aff1e50b6a6f931b5da90c6f5b7c623ba4583217a9b00e9d4c1b7c53b9739f
     ports:
       - "127.0.0.1:8001:8000"
     environment:

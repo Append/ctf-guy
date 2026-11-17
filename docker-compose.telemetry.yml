@@ -19,7 +19,7 @@ services:
       - "-retentionPeriod=30d"
 
   grafana:
-    image: grafana/grafana:13.2.0@sha256:3fd54ae1214669f8355f065ec9f6445d5279a3d77095ab048ca045685272429b
+    image: grafana/grafana:13.3.1@sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
